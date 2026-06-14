@@ -219,14 +219,23 @@
 
 .listTitle {
   margin-top: 0;
+  margin-bottom: 1rem;
   color: #f8fafc;
 }
 
 .list {
-  margin-bottom: 0;
-  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
   color: #b7c6dc;
-  line-height: 1.9;
+  line-height: 1.55;
+  list-style: none;
+}
+
+.list li {
+  margin: 0;
+  padding: 0;
 }
 
 .footer {
