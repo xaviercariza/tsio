@@ -1,15 +1,15 @@
 import type { TsIoClientAdapter } from './adapter'
 import {
   type ContractAction,
-  type ContractListener,
+  type ContractEvent,
   type ContractRouterType,
   type InferActionInput,
   type InferActionOutput,
-  type InferListenerData,
+  type InferEventData,
   type TActionWithAck,
   isActionWithAck,
   isContractAction,
-  isContractListener,
+  isContractEvent,
   isContractRouter,
 } from './contract'
 import type { TResponse } from './types'
@@ -20,8 +20,8 @@ type ActionWithAck<Action extends TActionWithAck> = (
   body: InferActionInput<Action>
 ) => Promise<TResponse<InferActionOutput<Action>>> | TResponse<InferActionOutput<Action>>
 
-type ListenerFunction<Listener extends ContractListener> = (
-  callback: (response: InferListenerData<Listener>) => void
+type EventFunction<Event extends ContractEvent> = (
+  callback: (response: InferEventData<Event>) => void
 ) => { unsubscribe: () => void }
 
 type ClientAction<Action> = Action extends TActionWithAck
@@ -30,27 +30,27 @@ type ClientAction<Action> = Action extends TActionWithAck
     ? BasicAction<Action>
     : never
 
-type ClientListener<Listener> = Listener extends ContractListener ? ListenerFunction<Listener> : never
+type ClientEvent<Event> = Event extends ContractEvent ? EventFunction<Event> : never
 
 type TsIoClientActions<Contract extends ContractRouterType> = {
-  [Key in keyof Contract as Contract[Key] extends ContractListener ? never : Key]: Contract[Key] extends ContractAction
+  [Key in keyof Contract as Contract[Key] extends ContractEvent ? never : Key]: Contract[Key] extends ContractAction
     ? ClientAction<Contract[Key]>
     : Contract[Key] extends ContractRouterType
       ? TsIoClientActions<Contract[Key]>
       : never
 }
 
-type TsIoClientListeners<Contract extends ContractRouterType> = {
-  [Key in keyof Contract as Contract[Key] extends ContractAction ? never : Key]: Contract[Key] extends ContractListener
-    ? ClientListener<Contract[Key]>
+type TsIoClientEvents<Contract extends ContractRouterType> = {
+  [Key in keyof Contract as Contract[Key] extends ContractAction ? never : Key]: Contract[Key] extends ContractEvent
+    ? ClientEvent<Contract[Key]>
     : Contract[Key] extends ContractRouterType
-      ? TsIoClientListeners<Contract[Key]>
+      ? TsIoClientEvents<Contract[Key]>
       : never
 }
 
 type TsIoClient<Contract extends ContractRouterType> = {
   actions: TsIoClientActions<Contract>
-  listeners: TsIoClientListeners<Contract>
+  events: TsIoClientEvents<Contract>
 }
 
 const getBasicAction =
@@ -73,15 +73,15 @@ const getActionWithAck =
     })
   }
 
-const getListener = <Listener extends ContractListener, Adapter extends TsIoClientAdapter<any>>(
+const getEvent = <Event extends ContractEvent, Adapter extends TsIoClientAdapter<any>>(
   adapter: Adapter,
-  listenerKey: string
-): ListenerFunction<Listener> => {
+  eventKey: string
+): EventFunction<Event> => {
   return callback => {
-    adapter.on(listenerKey as any, callback as any)
+    adapter.on(eventKey as any, callback as any)
     return {
       unsubscribe: () => {
-        adapter.unsubscribe(listenerKey as any)
+        adapter.unsubscribe(eventKey as any)
       },
     }
   }
@@ -102,7 +102,7 @@ const createClientActions = <
       return { ...acc, [key]: createClientActions(subRouter, adapter, actionPath) }
     }
 
-    if (isContractListener(subRouter)) {
+    if (isContractEvent(subRouter)) {
       return acc
     }
 
@@ -120,19 +120,19 @@ const createClientActions = <
   }, {} as TsIoClientActions<TContract>)
 }
 
-const createClientListeners = <
+const createClientEvents = <
   TContract extends ContractRouterType,
   Adapter extends TsIoClientAdapter<any>,
 >(
   contract: TContract,
   adapter: Adapter,
   path = ''
-): TsIoClientListeners<TContract> => {
+): TsIoClientEvents<TContract> => {
   return Object.entries(contract).reduce((acc, [key, subRouter]) => {
-    const listenerPath = path ? `${path}.${key}` : key
+    const eventPath = path ? `${path}.${key}` : key
 
     if (isContractRouter(subRouter)) {
-      return { ...acc, [key]: createClientListeners(subRouter, adapter, listenerPath) }
+      return { ...acc, [key]: createClientEvents(subRouter, adapter, eventPath) }
     }
 
     if (isContractAction(subRouter)) {
@@ -141,23 +141,23 @@ const createClientListeners = <
 
     return {
       ...acc,
-      [key]: getListener(adapter, listenerPath),
+      [key]: getEvent(adapter, eventPath),
     }
-  }, {} as TsIoClientListeners<TContract>)
+  }, {} as TsIoClientEvents<TContract>)
 }
 
-const initNewClient = <
+const createClient = <
   Contract extends ContractRouterType,
   Adapter extends TsIoClientAdapter<any>,
 >(
-  adapter: Adapter,
-  contract: Contract
+  contract: Contract,
+  adapter: Adapter
 ): TsIoClient<Contract> => {
   return {
     actions: createClientActions(contract, adapter),
-    listeners: createClientListeners(contract, adapter),
+    events: createClientEvents(contract, adapter),
   }
 }
 
-export { initNewClient }
-export type { TsIoClient, TsIoClientActions, TsIoClientListeners }
+export { createClient }
+export type { TsIoClient, TsIoClientActions, TsIoClientEvents }
