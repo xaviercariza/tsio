@@ -12,13 +12,13 @@ type Context = {
   socketId: string
 }
 
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 ```
 
 ## Middleware
 
 ```ts
-const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+const requireUser = tsio.middleware(async ({ ctx, next }) => {
   if (!ctx.user) {
     return {
       ok: false,
@@ -39,9 +39,9 @@ const requireUser = tsIo.middleware(async ({ ctx, next }) => {
 ## Protected handler
 
 ```ts
-const router = tsIo.router.create(a => ({
+const router = tsio.router.create(a => ({
   account: {
-    updateProfile: a.account.updateProfile.use(requireUser).handler(({ ctx, input }) => {
+    updateProfile: a.account.updateProfile.use(requireUser).handle(({ ctx, input }) => {
       ctx.user.id // User
       return updateProfile(ctx.user.id, input)
     }),
@@ -68,7 +68,7 @@ const requireAdmin = requireUser.pipe(async ({ ctx, next }) => {
 Now admin handlers receive both refinements:
 
 ```ts
-a.admin.deleteUser.use(requireAdmin).handler(({ ctx }) => {
+a.admin.deleteUser.use(requireAdmin).handle(({ ctx }) => {
   ctx.user    // User
   ctx.isAdmin // true
 })
