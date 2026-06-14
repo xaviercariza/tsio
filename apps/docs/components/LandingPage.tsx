@@ -16,8 +16,8 @@ const container: React.CSSProperties = {
 
 const heroGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, 0.95fr)',
-  gap: '3rem',
+  gridTemplateColumns: 'minmax(0, 0.96fr) minmax(360px, 1fr)',
+  gap: '2.25rem',
   alignItems: 'center',
 }
 
@@ -41,15 +41,16 @@ const eyebrow: React.CSSProperties = {
 }
 
 const title: React.CSSProperties = {
+  maxWidth: 620,
   margin: 0,
-  fontSize: 'clamp(3.25rem, 8vw, 6.8rem)',
-  lineHeight: 0.88,
-  letterSpacing: '-0.08em',
+  fontSize: 'clamp(3rem, 5.7vw, 5.25rem)',
+  lineHeight: 0.98,
+  letterSpacing: '-0.065em',
   color: '#f8fbff',
 }
 
 const subtitle: React.CSSProperties = {
-  maxWidth: 650,
+  maxWidth: 560,
   margin: '1.4rem 0 0',
   color: '#b7c6dc',
   fontSize: 'clamp(1.05rem, 2vw, 1.25rem)',
