@@ -1,0 +1,68 @@
+# Packages
+
+`tsio` is organized as a pnpm workspace.
+
+## `@tsio/core`
+
+The core contract and type system.
+
+Use it for:
+
+- defining contracts
+- creating routers
+- creating middleware
+- generating typed clients
+- attaching routers to adapters
+- using shared public types
+
+Install:
+
+```bash
+pnpm add @tsio/core zod
+```
+
+## `@tsio/socketio`
+
+Socket.IO adapters for `tsio`.
+
+Exports:
+
+```ts
+import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+```
+
+Install:
+
+```bash
+pnpm add @tsio/socketio socket.io socket.io-client
+```
+
+## `@tsio/ws`
+
+`ws` adapters for `tsio`.
+
+Exports:
+
+```ts
+import { createWsClientProxy } from '@tsio/ws/client'
+import { createWsServerProxy } from '@tsio/ws/server'
+```
+
+Install:
+
+```bash
+pnpm add @tsio/ws ws
+```
+
+## `@tsio/tests`
+
+Internal workspace test package.
+
+It contains runtime and type tests for the core and adapters. It is private and not intended for external use.
+
+## `@tsio/docs`
+
+Documentation app built with Next.js and Nextra.
+
+It is private and used to publish the documentation site.
