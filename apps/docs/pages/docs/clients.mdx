@@ -3,16 +3,16 @@
 Clients are generated from a transport adapter and a contract.
 
 ```ts
-import { initNewClient } from '@tsio/core'
+import { createClient } from '@tsio/core'
 
-const client = initNewClient(adapter, contract)
+const client = createClient(api, adapter)
 ```
 
 The generated client mirrors the contract shape and exposes two trees:
 
 ```ts
 client.actions
-client.listeners
+client.events
 ```
 
 ## Calling actions
@@ -42,10 +42,10 @@ The input type is inferred from the action input schema.
 
 ## Listening to events
 
-Listeners subscribe to server-to-client events.
+Events subscribe to server-to-client messages.
 
 ```ts
-const subscription = client.listeners.chat.onMessage(message => {
+const subscription = client.events.chat.onMessage(message => {
   message.id
   message.text
 })
@@ -53,7 +53,7 @@ const subscription = client.listeners.chat.onMessage(message => {
 subscription.unsubscribe()
 ```
 
-The callback payload type is inferred from the listener data schema.
+The callback payload type is inferred from the event data schema.
 
 ## Type-safe boundaries
 
@@ -63,21 +63,21 @@ The generated client prevents common mistakes:
 // @ts-expect-error wrong input shape
 client.actions.chat.sendMessage({ wrong: 'field' })
 
-// @ts-expect-error listeners are not actions
+// @ts-expect-error events are not actions
 client.actions.chat.onMessage({ id: '1', text: 'Hello' })
 
-// @ts-expect-error actions are not listeners
-client.listeners.chat.sendMessage(() => {})
+// @ts-expect-error actions are not events
+client.events.chat.sendMessage(() => {})
 ```
 
 ## Adapter ownership
 
-The client does not know whether it is using Socket.IO, `ws`, or a future transport. That is adapter responsibility.
+The client does not know whether it is using Socket.IO or `ws`. That is adapter responsibility.
 
 ```ts
 const socket = io('http://localhost:3000')
-const adapter = createSocketIoClientAdapter(socket)
-const client = initNewClient(adapter, contract)
+const adapter = socketioClient(socket)
+const client = createClient(api, adapter)
 ```
 
 Keep transport setup close to your app shell and pass the generated client through your preferred dependency mechanism.
