@@ -42,7 +42,7 @@ Then attach your router and call the action path:
 it('creates a post', async () => {
   const { adapter, handlers } = createTestAdapter()
 
-  tsIo.attachRouterToSocket({
+  tsio.attach({
     router,
     adapter,
     createContext: () => ({ userId: 'user-1' }),
@@ -61,7 +61,7 @@ This style is fast, deterministic, and does not require a real network connectio
 
 ## Test emitted events
 
-Use the same test adapter to assert that handlers emit the right listener events.
+Use the same test adapter to assert that handlers emit the right events.
 
 ```ts
 expect(adapter.emitTo).toHaveBeenCalledWith(
@@ -71,7 +71,7 @@ expect(adapter.emitTo).toHaveBeenCalledWith(
 )
 ```
 
-This verifies the action handler calls `emitEventTo` with the expected listener path, target id, and payload.
+This verifies the action handler calls `emit` with the expected event path, target id, and payload.
 
 ## Test middleware behavior
 
@@ -84,7 +84,7 @@ Middleware should be tested in two ways:
 it('rejects unauthenticated users', async () => {
   const { adapter, handlers } = createTestAdapter()
 
-  tsIo.attachRouterToSocket({
+  tsio.attach({
     router,
     adapter,
     createContext: () => ({ user: null }),
@@ -113,8 +113,8 @@ After your handlers are covered with a test adapter, add one or two tests using 
 Good integration tests include:
 
 - a client can call a request-response action and receive the response
-- a server handler can emit a listener event to a connected client
-- unsubscribe stops future listener callbacks
+- a server handler can emit an event to a connected client
+- unsubscribe stops future event callbacks
 
 Keep these tests focused on transport wiring, not every business branch.
 
