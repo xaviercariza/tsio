@@ -1,8 +1,8 @@
-import { defineContract } from '@tsio/core'
-import { GroupSchema, MessageSchema, NewMessageSchema } from './schemas'
+import { contract } from '@tsio/core'
 import { z } from 'zod'
+import { GroupSchema, NewMessageSchema } from './schemas'
 
-const chatContract = defineContract({
+const chatContract = contract({
   chat: {
     sendMessage: {
       type: 'action',
@@ -10,7 +10,7 @@ const chatContract = defineContract({
       response: GroupSchema,
     },
     onMessageReceived: {
-      type: 'listener',
+      type: 'event',
       data: GroupSchema,
     },
     updateTypingState: {
@@ -18,7 +18,7 @@ const chatContract = defineContract({
       input: z.object({ chatId: z.string(), userId: z.string(), isTyping: z.boolean() }),
     },
     onUserIsTyping: {
-      type: 'listener',
+      type: 'event',
       data: z.object({ chatId: z.string(), nickname: z.string(), isTyping: z.boolean() }),
     },
   },
