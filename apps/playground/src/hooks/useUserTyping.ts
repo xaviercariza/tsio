@@ -13,7 +13,7 @@ export function useUserIsTyping(chatId: string | undefined, userId: string, isTy
 
   useEffect(() => {
     if (tsIo) {
-      const listener = tsIo.listeners.chat.onUserIsTyping(
+      const event = tsIo.events.chat.onUserIsTyping(
         ({ chatId: chatIdFromServer, nickname, isTyping }) => {
           if (chatIdFromServer === chatId) {
             setUserTyping(isTyping ? nickname : null)
@@ -22,7 +22,7 @@ export function useUserIsTyping(chatId: string | undefined, userId: string, isTy
       )
 
       return () => {
-        listener.unsubscribe()
+        event.unsubscribe()
       }
     }
   }, [chatId, tsIo])
