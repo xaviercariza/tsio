@@ -1,0 +1,114 @@
+# Chat Protocol
+
+This guide outlines a practical chat protocol using actions and listeners.
+
+## Contract
+
+```ts
+const MessageSchema = z.object({
+  id: z.string(),
+  chatId: z.string(),
+  senderId: z.string(),
+  text: z.string(),
+  createdAt: z.string(),
+})
+
+export const chatContract = defineContract({
+  chat: {
+    sendMessage: {
+      type: 'action',
+      input: z.object({
+        chatId: z.string(),
+        text: z.string().min(1),
+      }),
+      response: MessageSchema,
+      options: { validate: true },
+    },
+    updateTypingState: {
+      type: 'action',
+      input: z.object({
+        chatId: z.string(),
+        isTyping: z.boolean(),
+      }),
+    },
+    onMessageReceived: {
+      type: 'listener',
+      data: MessageSchema,
+    },
+    onTypingStateChanged: {
+      type: 'listener',
+      data: z.object({
+        chatId: z.string(),
+        userId: z.string(),
+        isTyping: z.boolean(),
+      }),
+    },
+  },
+})
+```
+
+## Server router
+
+```ts
+const router = tsIo.router.create(a => ({
+  chat: {
+    sendMessage: a.chat.sendMessage.use(requireUser).handler(async ({ ctx, input, emitEventTo }) => {
+      const message = await messages.create({
+        chatId: input.chatId,
+        senderId: ctx.user.id,
+        text: input.text,
+      })
+
+      const recipients = await chats.getParticipantSocketIds(input.chatId)
+
+      for (const socketId of recipients) {
+        emitEventTo('chat.onMessageReceived', socketId, message)
+      }
+
+      return { success: true, data: message }
+    }),
+    updateTypingState: a.chat.updateTypingState.use(requireUser).handler(async ({ ctx, input, emitEventTo }) => {
+      const recipients = await chats.getParticipantSocketIds(input.chatId)
+
+      for (const socketId of recipients) {
+        emitEventTo('chat.onTypingStateChanged', socketId, {
+          chatId: input.chatId,
+          userId: ctx.user.id,
+          isTyping: input.isTyping,
+        })
+      }
+    }),
+  },
+}))
+```
+
+## Client usage
+
+```ts
+await client.actions.chat.sendMessage({
+  chatId: 'chat-1',
+  text: 'Hello',
+})
+
+client.listeners.chat.onMessageReceived(message => {
+  addMessageToUi(message)
+})
+
+client.listeners.chat.onTypingStateChanged(event => {
+  updateTypingIndicator(event)
+})
+```
+
+## Notes
+
+For production chat, also consider:
+
+- authorization per chat room
+- message persistence
+- message ordering
+- reconnect behavior
+- missed-event recovery
+- idempotent message creation
+- pagination for historical messages
+
+`tsio` handles the typed protocol boundary, not the storage or product semantics.
