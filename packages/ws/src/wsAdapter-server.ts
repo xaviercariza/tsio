@@ -1,9 +1,9 @@
 import type { ContractAction, TsIoServerAdapter, TsIoServerEmitter } from '@tsio/core'
 import { v4 as uuidv4 } from 'uuid'
-import type ws from 'ws'
+import type wsModule from 'ws'
 import type { WebSocketServer } from 'ws'
 
-export type TsIoWebSocket = ws.WebSocket & { id?: string }
+export type TsIoWebSocket = wsModule.WebSocket & { id?: string }
 
 export type TsIoWebSocketServer = Omit<WebSocketServer, 'clients'> & {
   clients: Set<TsIoWebSocket>
