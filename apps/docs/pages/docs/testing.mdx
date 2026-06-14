@@ -1,0 +1,94 @@
+# Testing Strategy
+
+`tsio` relies on both runtime tests and type tests.
+
+Runtime tests prove that adapters and handlers behave correctly. Type tests prove that the compiler protects the public API.
+
+## Runtime tests
+
+Runtime tests use normal `.test.ts` files.
+
+They should cover behavior that actually executes:
+
+- router attachment
+- action dispatch
+- request/response behavior
+- server-to-client emits
+- middleware execution
+- validation behavior
+- transport adapter integration
+
+Example:
+
+```ts
+it('validates action input when validation is enabled', async () => {
+  await expect(handler({ title: 123 })).rejects.toThrow()
+})
+```
+
+## Type tests
+
+Type tests use `.test-d.ts` files.
+
+They should cover compiler guarantees:
+
+- action input inference
+- response inference
+- listener payload inference
+- invalid action payloads
+- invalid listener payloads
+- middleware context refinement
+- actions not being exposed as listeners
+- listeners not being exposed as actions
+
+Example:
+
+```ts
+expectTypeOf(client.actions.chat.sendMessage)
+  .parameter(0)
+  .toEqualTypeOf<{ text: string }>()
+
+// @ts-expect-error wrong input shape
+client.actions.chat.sendMessage({ wrong: 'field' })
+```
+
+## Organization
+
+Keep type assertions out of runtime tests. Use dedicated `.test-d.ts` files for type-level behavior.
+
+Recommended structure:
+
+```txt
+packages/tests/src/
+  core-runtime.test.ts
+  core-client-types.test-d.ts
+  core-middleware-types.test-d.ts
+  middlewares.test.ts
+  socket-io.test.ts
+  ws.test.ts
+```
+
+## Avoiding redundant tests
+
+Do not test the same behavior through every adapter unless the adapter itself matters.
+
+Good:
+
+- core validation in `core-runtime.test.ts`
+- Socket.IO request/response in `socket-io.test.ts`
+- `ws` request/response in `ws.test.ts`
+
+Redundant:
+
+- repeating every core validation branch through every transport
+- duplicating all type assertions in runtime tests
+
+## Local commands
+
+```bash
+pnpm run build
+pnpm run test
+pnpm run types-check
+```
+
+`pnpm run test` runs Vitest, including type tests when Vitest typechecking is enabled.
