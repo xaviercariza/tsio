@@ -1,4 +1,4 @@
-import { defineContract, initNewClient, initTsIo, type TResponse, type TsIoClientAdapter } from '@tsio/core'
+import { contract, createClient, createServer, type TResponse, type TsIoClientAdapter } from '@tsio/core'
 import { expectTypeOf } from 'vitest'
 import { z } from 'zod'
 
@@ -11,7 +11,7 @@ const MessageSchema = z.object({
   text: z.string(),
 })
 
-const contract = defineContract({
+const api = contract({
   actions: {
     sendMessage: {
       type: 'action',
@@ -25,7 +25,7 @@ const contract = defineContract({
   },
   events: {
     onMessage: {
-      type: 'listener',
+      type: 'event',
       data: MessageSchema,
     },
   },
@@ -35,20 +35,20 @@ type Context = {
   requestId: string
 }
 
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 
-tsIo.router.create(a => ({
+tsio.router.create(a => ({
   actions: {
-    sendMessage: a.actions.sendMessage.handler(({ input, emitEventTo }) => {
+    sendMessage: a.actions.sendMessage.handle(({ input, emit }) => {
       expectTypeOf(input).toEqualTypeOf<{ text: string }>()
 
-      emitEventTo('events.onMessage', 'socket-1', { id: 'message-1', text: input.text })
+      emit('events.onMessage', 'socket-1', { id: 'message-1', text: input.text })
 
-      // @ts-expect-error action paths cannot be emitted as listener events
-      emitEventTo('actions.sendMessage', 'socket-1', { id: 'message-1', text: input.text })
+      // @ts-expect-error action paths cannot be emitted as events
+      emit('actions.sendMessage', 'socket-1', { id: 'message-1', text: input.text })
 
-      // @ts-expect-error listener payload must match its schema
-      emitEventTo('events.onMessage', 'socket-1', { id: 'message-1' })
+      // @ts-expect-error event payload must match its schema
+      emit('events.onMessage', 'socket-1', { id: 'message-1' })
 
       return {
         success: true,
@@ -58,15 +58,15 @@ tsIo.router.create(a => ({
         },
       }
     }),
-    markRead: a.actions.markRead.handler(({ input }) => {
+    markRead: a.actions.markRead.handle(({ input }) => {
       expectTypeOf(input).toEqualTypeOf<{ messageId: string }>()
     }),
   },
   events: {},
 }))
 
-declare const adapter: TsIoClientAdapter<typeof contract>
-const client = initNewClient(adapter, contract)
+declare const adapter: TsIoClientAdapter<typeof api>
+const client = createClient(api, adapter)
 
 type SendMessage = typeof client.actions.actions.sendMessage
 type SendMessageResult = ReturnType<SendMessage>
@@ -81,12 +81,12 @@ client.actions.actions.markRead({ messageId: 'message-1' })
 // @ts-expect-error action input must match its schema
 client.actions.actions.sendMessage({ wrong: 'field' })
 
-// @ts-expect-error listeners are not exposed as actions
+// @ts-expect-error events are not exposed as actions
 client.actions.events.onMessage({ id: 'message-1', text: 'hello' })
 
-client.listeners.events.onMessage(data => {
+client.events.events.onMessage(data => {
   expectTypeOf(data).toEqualTypeOf<{ id: string; text: string }>()
 })
 
-// @ts-expect-error actions are not exposed as listeners
-client.listeners.actions.sendMessage(() => {})
+// @ts-expect-error actions are not exposed as events
+client.events.actions.sendMessage(() => {})
