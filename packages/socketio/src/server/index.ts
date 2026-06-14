@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 type TsIoSocketIoSocket = Socket & { id?: string }
 
-function createSocketIoServerAdapter<Action extends ContractAction>(
+function socketio<Action extends ContractAction>(
   socket: TsIoSocketIoSocket
 ): TsIoServerAdapter<Action> {
   const emitToClient: TsIoServerEmitter = (socketId, response) => {
@@ -31,4 +31,4 @@ function createSocketIoServerAdapter<Action extends ContractAction>(
   }
 }
 
-export { createSocketIoServerAdapter }
+export { socketio }
