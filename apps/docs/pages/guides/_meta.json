@@ -1,0 +1,5 @@
+{
+  "auth-middleware": "Auth Middleware",
+  "chat": "Chat Protocol",
+  "scaling-and-pubsub": "Scaling & Pub/Sub"
+}
