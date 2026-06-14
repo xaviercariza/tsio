@@ -1,0 +1,127 @@
+# Core Concepts
+
+`tsio` has a small set of concepts. Understanding these makes the rest of the library predictable.
+
+## Contract
+
+The contract describes the protocol. It is a nested object whose leaves are either actions or listeners.
+
+```ts
+const contract = defineContract({
+  room: {
+    join: {
+      type: 'action',
+      input: JoinRoomSchema,
+      response: RoomSchema,
+    },
+    onUserJoined: {
+      type: 'listener',
+      data: UserJoinedSchema,
+    },
+  },
+})
+```
+
+The path for those leaves is derived from the object structure:
+
+- `room.join`
+- `room.onUserJoined`
+
+## Actions
+
+Actions are messages sent from the client to the server.
+
+Actions can be fire-and-forget:
+
+```ts
+updateTypingState: {
+  type: 'action',
+  input: TypingStateSchema,
+}
+```
+
+or request/response:
+
+```ts
+sendMessage: {
+  type: 'action',
+  input: NewMessageSchema,
+  response: MessageSchema,
+}
+```
+
+If an action has a `response` schema, the generated client action returns a response union.
+
+## Listeners
+
+Listeners are messages sent from the server to a client.
+
+```ts
+onMessageReceived: {
+  type: 'listener',
+  data: MessageSchema,
+}
+```
+
+Server handlers emit listener events with `emitEventTo`:
+
+```ts
+emitEventTo('chat.onMessageReceived', socketId, message)
+```
+
+The path and payload are both type-checked.
+
+## Router
+
+A router implements the action leaves from a contract.
+
+```ts
+const router = tsIo.router.create(a => ({
+  chat: {
+    sendMessage: a.chat.sendMessage.handler(({ input }) => {
+      return { success: true, data: saveMessage(input) }
+    }),
+  },
+}))
+```
+
+Listeners are not implemented in the server router because they are emitted by server handlers.
+
+## Client
+
+A client is generated from a transport adapter and the same contract.
+
+```ts
+const client = initNewClient(adapter, contract)
+```
+
+It exposes two trees:
+
+```ts
+client.actions
+client.listeners
+```
+
+The tree shape mirrors the contract, while the leaf types are inferred from Zod schemas.
+
+## Middleware
+
+Middleware runs before the action handler. It can reject a request, call `next()`, or refine context for the next middleware and final handler.
+
+```ts
+const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) return { ok: false, error: new Error('Unauthorized') }
+  return next({ ctx: { user: ctx.user } })
+})
+```
+
+After `requireUser`, the handler receives a non-null `ctx.user`.
+
+## Adapter
+
+Adapters map the core protocol to a concrete transport. The current adapters are:
+
+- `@tsio/socketio`
+- `@tsio/ws`
+
+The core package does not depend on Socket.IO or `ws` directly.
