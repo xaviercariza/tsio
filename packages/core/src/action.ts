@@ -19,6 +19,7 @@ interface ActionCallOptions<Contract extends ContractRouterType, TContext, TInpu
 }
 
 type ActionResolverParams<Contract extends ContractRouterType, TContext, TInput> = {
+  path: string
   ctx: TContext
   input: TInput
   emitEventTo: EmitEventToFunction<Contract>
