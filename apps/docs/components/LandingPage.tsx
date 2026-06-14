@@ -14,24 +14,21 @@ const container: React.CSSProperties = {
   margin: '0 auto',
 }
 
+const heroGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, 0.95fr)',
+  gap: '3rem',
+  alignItems: 'center',
+}
+
 const badge: React.CSSProperties = {
   display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.5rem',
   padding: '0.5rem 0.8rem',
   border: '1px solid rgba(148, 163, 184, 0.28)',
   borderRadius: 999,
   background: 'rgba(15, 23, 42, 0.62)',
   color: '#b6c4db',
   fontSize: '0.86rem',
-  backdropFilter: 'blur(16px)',
-}
-
-const heroGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, 0.95fr)',
-  gap: '3rem',
-  alignItems: 'center',
 }
 
 const eyebrow: React.CSSProperties = {
@@ -100,7 +97,6 @@ const panel: React.CSSProperties = {
   overflow: 'hidden',
   background: 'rgba(2, 6, 23, 0.78)',
   boxShadow: '0 30px 100px rgba(0, 0, 0, 0.38)',
-  backdropFilter: 'blur(22px)',
 }
 
 const panelHeader: React.CSSProperties = {
@@ -125,20 +121,6 @@ const codeBlock: React.CSSProperties = {
   fontSize: '0.82rem',
   lineHeight: 1.7,
   overflowX: 'auto',
-}
-
-const statsGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: '1rem',
-  marginTop: '2.3rem',
-}
-
-const statCard: React.CSSProperties = {
-  padding: '1rem',
-  border: '1px solid rgba(148, 163, 184, 0.2)',
-  borderRadius: 18,
-  background: 'rgba(15, 23, 42, 0.5)',
 }
 
 const section: React.CSSProperties = {
@@ -239,12 +221,12 @@ const features = [
   {
     icon: '01',
     title: 'One contract for both directions',
-    body: 'Describe client-to-server actions and server-to-client listener events in a single Zod-powered protocol contract.',
+    body: 'Describe client-to-server actions and server-to-client listener events in a single Zod-powered contract.',
   },
   {
     icon: '02',
     title: 'Fully typed clients',
-    body: 'Generate nested action and listener clients from the contract without manually duplicating event names or payload types.',
+    body: 'Generate nested action and listener clients without manually duplicating event names or payload types.',
   },
   {
     icon: '03',
@@ -258,13 +240,13 @@ const features = [
   },
   {
     icon: '05',
-    title: 'Transport adapters',
-    body: 'Use the same core contract with Socket.IO and ws today, with room for future transports and backplanes.',
+    title: 'Socket.IO and ws adapters',
+    body: 'Use the same core contract with the Socket.IO or ws adapter depending on your runtime needs.',
   },
   {
     icon: '06',
     title: 'Runtime validation when needed',
-    body: 'Keep the fast path simple, or opt into schema parsing for action input and successful response payloads.',
+    body: 'Opt into schema parsing for action input and successful response payloads at the transport boundary.',
   },
 ]
 
@@ -275,11 +257,11 @@ export function LandingPage() {
         <section style={heroGrid}>
           <div>
             <span style={badge}>Type-safe realtime protocols for TypeScript</span>
-            <p style={eyebrow}>Contract-first actions and events</p>
-            <h1 style={title}>Ship realtime APIs without stringly typed sockets.</h1>
+            <p style={eyebrow}>Contract-first actions and listeners</p>
+            <h1 style={title}>Build socket APIs without stringly typed events.</h1>
             <p style={subtitle}>
               tsio lets you define a shared contract once and use it to type server handlers, client
-              actions, client listeners, middleware context, and transport adapters.
+              actions, client listeners, middleware context, and socket transport adapters.
             </p>
             <div style={actions}>
               <a href="/docs/getting-started" style={primaryLink}>
@@ -291,20 +273,6 @@ export function LandingPage() {
               <a href="https://github.com/xaviercariza/tsio" style={secondaryLink}>
                 GitHub
               </a>
-            </div>
-            <div style={statsGrid}>
-              <div style={statCard}>
-                <strong style={{ color: '#f8fafc', fontSize: '1.35rem' }}>Zod</strong>
-                <div style={{ color: '#9fb0c8', marginTop: 4 }}>schema inference</div>
-              </div>
-              <div style={statCard}>
-                <strong style={{ color: '#f8fafc', fontSize: '1.35rem' }}>2</strong>
-                <div style={{ color: '#9fb0c8', marginTop: 4 }}>socket adapters</div>
-              </div>
-              <div style={statCard}>
-                <strong style={{ color: '#f8fafc', fontSize: '1.35rem' }}>0</strong>
-                <div style={{ color: '#9fb0c8', marginTop: 4 }}>manual event types</div>
-              </div>
             </div>
           </div>
 
@@ -323,9 +291,8 @@ export function LandingPage() {
         <section style={section}>
           <h2 style={sectionTitle}>Built for bidirectional TypeScript apps.</h2>
           <p style={sectionCopy}>
-            tRPC is excellent for server-owned request/response APIs. tsio focuses on protocol
-            contracts for realtime systems where the client calls actions and the server emits
-            typed events back to connected clients.
+            Use tsio when the client calls server actions and the server emits typed listener events
+            back to connected clients. The contract keeps both directions in sync.
           </p>
           <div style={featureGrid}>
             {features.map(feature => (
@@ -343,35 +310,34 @@ export function LandingPage() {
         <section style={section}>
           <h2 style={sectionTitle}>Use it when your API has a pulse.</h2>
           <p style={sectionCopy}>
-            tsio shines when users, devices, workers, or game clients need live coordination: chat,
-            multiplayer sessions, collaborative interfaces, dashboards, control planes, and internal
-            tools with typed realtime feedback.
+            tsio is designed for live systems where connected clients need typed actions,
+            acknowledgements, and server-pushed updates.
           </p>
           <div style={comparisonGrid}>
             <div style={comparisonCard}>
               <h3 style={{ color: '#f8fafc', marginTop: 0 }}>Great fit</h3>
               <ul style={{ color: '#b7c6dc', lineHeight: 1.9, paddingLeft: '1.2rem' }}>
                 <li>Realtime chat and presence</li>
-                <li>Game room commands and events</li>
+                <li>Game rooms and multiplayer sessions</li>
                 <li>Collaborative document updates</li>
                 <li>Live dashboards and admin consoles</li>
               </ul>
             </div>
             <div style={comparisonCard}>
-              <h3 style={{ color: '#f8fafc', marginTop: 0 }}>Probably not the first choice</h3>
+              <h3 style={{ color: '#f8fafc', marginTop: 0 }}>Not the first choice</h3>
               <ul style={{ color: '#b7c6dc', lineHeight: 1.9, paddingLeft: '1.2rem' }}>
                 <li>Plain CRUD APIs that only need HTTP</li>
                 <li>Static content delivery</li>
                 <li>One-off form submissions without live updates</li>
-                <li>Serverless-only flows with no realtime transport</li>
+                <li>Serverless-only flows with no socket connection</li>
               </ul>
             </div>
           </div>
         </section>
 
         <footer style={footer}>
-          <span>tsio is pre-1.0 and evolving.</span>
-          <span>MIT · TypeScript · Contract-first realtime</span>
+          <span>Contract-first realtime for TypeScript.</span>
+          <span>MIT · Socket.IO · ws · Zod</span>
         </footer>
       </div>
     </main>
