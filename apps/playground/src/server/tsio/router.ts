@@ -4,7 +4,7 @@ import { router } from './tsio'
 
 const chatRouter = router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.handler(async ({ input, emitEventTo, ctx }) => {
+    sendMessage: a.chat.sendMessage.handle(async ({ input, emit, ctx }) => {
       let existingChat = await prisma.group.findFirst({
         where: {
           AND: [
@@ -103,11 +103,11 @@ const chatRouter = router.create(a => ({
         users: group.users.map(u => u.user),
       }
 
-      emitEventTo('chat.onMessageReceived', chat.receiver.socketId, normalizedChat)
+      emit('chat.onMessageReceived', chat.receiver.socketId, normalizedChat)
 
       return { success: true, data: normalizedChat }
     }),
-    updateTypingState: a.chat.updateTypingState.handler(async ({ input, emitEventTo }) => {
+    updateTypingState: a.chat.updateTypingState.handle(async ({ input, emit }) => {
       const chat = await prisma.group.findUnique({
         where: {
           id: input.chatId,
@@ -138,7 +138,7 @@ const chatRouter = router.create(a => ({
 
       for (const chatUser of chat.users) {
         if (chatUser.user.socketId) {
-          emitEventTo('chat.onUserIsTyping', chatUser.user.socketId, {
+          emit('chat.onUserIsTyping', chatUser.user.socketId, {
             chatId: chat.id,
             nickname: userTyping.user.nickname,
             isTyping: input.isTyping,
