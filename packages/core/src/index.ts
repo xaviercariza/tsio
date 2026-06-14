@@ -12,7 +12,7 @@ export type {
   ContractRouterType,
   EmitFunction,
 } from './contract'
-export { createServer } from './initTsIo'
+export { createServer } from './server'
 export { mergeContracts } from './utils'
 export type { Router, RouterCreator } from './router'
 export type { MiddlewareResult, MiddlewareBuilder } from './middleware'
