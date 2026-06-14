@@ -31,4 +31,4 @@ pages/reference        # API and package reference
 components             # landing page and shared docs components
 ```
 
-The documentation is intentionally written for a pre-1.0 library: stable Socket.IO and `ws` usage is documented, while future adapter ideas are clearly marked as future directions.
+The documentation is written for developers using the library: it explains the supported core API, Socket.IO adapter, `ws` adapter, middleware model, runtime validation, and testing approach.
