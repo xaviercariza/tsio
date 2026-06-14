@@ -1,14 +1,25 @@
-import type { Action } from './action'
-import { type ActionBuilder, createBuilder } from './builder'
+import type { Action, ActionResolver, ActionRuntimeDefinition, AnyAction } from './action'
 import {
   type ContractAction,
-  type ContractPaths,
+  type ContractListener,
   type ContractRouterType,
-  type TActionWithAck,
+  type InferActionInput,
+  type InferActionOutput,
+  isActionWithAck,
   isContractListener,
   isContractRouter,
 } from './contract'
-import type { ParseSchema, UnsetMarker } from './types'
+import {
+  type AnyMiddlewareBuilder,
+  type AnyMiddlewareFn,
+  type AnyMiddlewareFunction,
+  type MiddlewareBuilder,
+  type MiddlewareContextOut,
+  type MiddlewareFactoryFunction,
+  type MiddlewareResult,
+  isMiddlewareResolver,
+} from './middleware'
+import type { Overwrite } from './types'
 
 type AnyRouter = Router<any, any, any>
 type Router<
@@ -16,44 +27,70 @@ type Router<
   TContext,
   RootContract extends ContractRouterType,
 > = {
-  [K in keyof Contract as Contract[K] extends ContractAction | ContractRouterType
-    ? K
-    : never]: Contract[K] extends ContractRouterType
-    ? Router<Contract[K], TContext, RootContract>
-    : Contract[K] extends ContractAction
-      ? Action<
-          RootContract,
-          TContext,
-          ParseSchema<Contract[K]['input']>,
-          Contract[K] extends TActionWithAck ? ParseSchema<Contract[K]['response']> : UnsetMarker
-        >
+  [K in keyof Contract as Contract[K] extends ContractListener ? never : K]: Contract[K] extends ContractAction
+    ? Action<RootContract, TContext, InferActionInput<Contract[K]>, InferActionOutput<Contract[K]>>
+    : Contract[K] extends ContractRouterType
+      ? Router<Contract[K], TContext, RootContract>
       : never
 }
 
 type RouterActionsBuilder<
   Contract extends ContractRouterType,
-  TInitialContext,
+  TContext,
   RootContract extends ContractRouterType,
 > = {
-  [K in keyof Contract as K extends ContractPaths<Contract, 'listener'>
-    ? never
-    : K]: Contract[K] extends ContractRouterType
-    ? RouterActionsBuilder<Contract[K], TInitialContext, RootContract>
-    : Contract[K] extends ContractAction
-      ? ActionBuilder<
-          RootContract,
-          TInitialContext,
-          TInitialContext,
-          ParseSchema<Contract[K]['input']>,
-          Contract[K] extends TActionWithAck ? ParseSchema<Contract[K]['response']> : UnsetMarker
-        >
+  [K in keyof Contract as Contract[K] extends ContractListener ? never : K]: Contract[K] extends ContractAction
+    ? ActionBuilder<
+        RootContract,
+        TContext,
+        TContext,
+        InferActionInput<Contract[K]>,
+        InferActionOutput<Contract[K]>
+      >
+    : Contract[K] extends ContractRouterType
+      ? RouterActionsBuilder<Contract[K], TContext, RootContract>
       : never
 }
+
+export interface ActionBuilder<
+  RootContract extends ContractRouterType,
+  TInitialContext,
+  TCurrentContext,
+  TInput,
+  TOutput,
+> {
+  _def: ActionRuntimeDefinition
+  use<TMiddleware extends MiddlewareFactoryFunction<TCurrentContext, any>>(
+    fn: TMiddleware
+  ): ActionBuilder<
+    RootContract,
+    TInitialContext,
+    Overwrite<TCurrentContext, MiddlewareContextOut<TMiddleware>>,
+    TInput,
+    TOutput
+  >
+  use<TRequiredContext, TContextOut extends object>(
+    fn: TCurrentContext extends TRequiredContext
+      ? MiddlewareBuilder<TRequiredContext, TContextOut, any>
+      : never
+  ): ActionBuilder<
+    RootContract,
+    TInitialContext,
+    Overwrite<TCurrentContext, TContextOut>,
+    TInput,
+    TOutput
+  >
+  handler(
+    resolver: ActionResolver<RootContract, TCurrentContext, TInput, TOutput>
+  ): Action<RootContract, TInitialContext, TInput, TOutput>
+}
+
+type AnyActionBuilder = ActionBuilder<any, any, any, any, any>
 
 type AnyRouterCreator = RouterCreator<any, any, any>
 interface RouterCreator<
   TContract extends ContractRouterType,
-  TContext extends object,
+  TContext,
   RootContract extends ContractRouterType,
 > {
   create(
@@ -61,101 +98,225 @@ interface RouterCreator<
       actions: RouterActionsBuilder<TContract, TContext, RootContract>
     ) => Router<TContract, TContext, RootContract>
   ): Router<TContract, TContext, RootContract>
-  create(
-    router: Router<TContract, TContext, RootContract>
-  ): Router<TContract, TContext, RootContract>
+  create(router: Router<TContract, TContext, RootContract>): Router<TContract, TContext, RootContract>
 }
 
 type Routers<
-  T extends ContractRouterType,
-  TContext extends object,
+  TContract extends ContractRouterType,
+  TContext,
   RootContract extends ContractRouterType,
-> = RouterCreator<T, TContext, RootContract> & {
-  [K in keyof T]: T[K] extends ContractRouterType
-    ? Routers<T[K], TContext, RootContract>
-    : T[K] extends ContractRouterType
-      ? RouterCreator<T[K], TContext, RootContract>
-      : never
+> = RouterCreator<TContract, TContext, RootContract> & {
+  [K in keyof TContract as TContract[K] extends ContractRouterType ? K : never]: TContract[K] extends ContractRouterType
+    ? Routers<TContract[K], TContext, RootContract>
+    : never
+}
+
+function getMiddlewareFnsFromInput(
+  middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder
+): AnyMiddlewareFunction[] {
+  return typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
+    ? middlewareBuilderOrFn._middlewares
+    : [middlewareBuilderOrFn]
+}
+
+function createActionBuilder<
+  RootContract extends ContractRouterType,
+  TInitialContext,
+  TCurrentContext,
+  TInput,
+  TOutput,
+>(def: ActionRuntimeDefinition): ActionBuilder<RootContract, TInitialContext, TCurrentContext, TInput, TOutput> {
+  const builder = {
+    _def: def,
+    use(middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder) {
+      const middlewares = getMiddlewareFnsFromInput(middlewareBuilderOrFn)
+
+      return createActionBuilder({
+        ...def,
+        middlewares: [
+          ...def.middlewares,
+          ...middlewares.map(middleware => ({ type: 'middleware', fn: middleware }) as AnyMiddlewareFn),
+        ],
+      })
+    },
+    handler(resolver: ActionResolver<any, any, any, any>) {
+      return createResolver(def, resolver)
+    },
+  }
+
+  return builder as ActionBuilder<RootContract, TInitialContext, TCurrentContext, TInput, TOutput>
+}
+
+function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolver<any, any, any, any>) {
+  const _def: ActionRuntimeDefinition = {
+    ..._defIn,
+    middlewares: [
+      ..._defIn.middlewares,
+      {
+        type: 'resolver',
+        fn: async function resolveMiddleware(opts) {
+          const data = await resolver({
+            path: opts.path,
+            ctx: opts.ctx,
+            input: opts.input,
+            emitEventTo: opts.emitEventTo,
+          })
+
+          return {
+            ok: true,
+            data,
+            ctx: opts.ctx,
+          } as const
+        },
+      },
+    ],
+  }
+
+  const action = async (opts: any) => {
+    async function callRecursive(
+      callOpts: {
+        ctx: any
+        index: number
+      } = {
+        index: 0,
+        ctx: opts.ctx,
+      }
+    ): Promise<MiddlewareResult<any>> {
+      try {
+        const middleware = _def.middlewares[callOpts.index]
+        if (!middleware) {
+          throw new Error(`Middleware not found at position ${callOpts.index}`)
+        }
+
+        const params = {
+          ctx: callOpts.ctx,
+          path: opts.path,
+          input: opts.input,
+        }
+
+        if (isMiddlewareResolver(middleware)) {
+          return await middleware.fn({
+            ...params,
+            emitEventTo: opts.emitTo,
+          })
+        }
+
+        return await middleware.fn({
+          ...params,
+          next(nextOpts?: { ctx?: any }) {
+            return callRecursive({
+              index: callOpts.index + 1,
+              ctx:
+                nextOpts && 'ctx' in nextOpts && nextOpts.ctx !== undefined
+                  ? { ...callOpts.ctx, ...nextOpts.ctx }
+                  : callOpts.ctx,
+            })
+          },
+        })
+      } catch (cause) {
+        return {
+          ok: false,
+          error: cause as Error,
+        }
+      }
+    }
+
+    const result = await callRecursive()
+    if (!result) {
+      throw new Error('No result from middlewares - did you forget to `return next()`?')
+    }
+    if (!result.ok) {
+      throw result.error
+    }
+    return result.data
+  }
+
+  action._def = _def
+
+  return action as AnyAction
 }
 
 const createContractActions = <
   TContract extends ContractRouterType,
-  TContext extends object,
+  TContext,
   RootContract extends ContractRouterType,
 >(
   contract: TContract
 ): RouterActionsBuilder<TContract, TContext, RootContract> => {
   return Object.entries(contract).reduce((acc, [key, subRouter]) => {
     if (isContractRouter(subRouter)) {
-      return { ...acc, [key]: createContractActions(subRouter) }
+      return {
+        ...acc,
+        [key]: createContractActions<ContractRouterType, TContext, RootContract>(subRouter),
+      }
     }
 
     if (isContractListener(subRouter)) {
       return acc
     }
 
-    type ActionSchema = typeof subRouter
-    type TActionBuilder = ActionBuilder<
-      TContract,
-      TContext,
-      any,
-      ActionSchema extends ContractAction ? ActionSchema['input'] : undefined,
-      ActionSchema extends TActionWithAck ? ActionSchema['response'] : undefined
-    >
+    const action = subRouter as ContractAction
     return {
       ...acc,
-      [key]: createBuilder({
-        input: subRouter.input,
-      }) as TActionBuilder,
+      [key]: createActionBuilder({
+        input: action.input,
+        response: isActionWithAck(action) ? action.response : undefined,
+        validateInput: action.options?.validate ?? false,
+        validateResponse: action.options?.validate ?? false,
+        middlewares: [],
+      }),
     }
   }, {}) as RouterActionsBuilder<TContract, TContext, RootContract>
 }
 
-const getRouterCreator = <TContract extends ContractRouterType, TContext extends object>(
-  router: TContract
-): RouterCreator<TContract, TContext, TContract> => {
+const getRouterCreator = <
+  TContract extends ContractRouterType,
+  TContext,
+  RootContract extends ContractRouterType,
+>(
+  contract: TContract
+): RouterCreator<TContract, TContext, RootContract> => {
   return {
-    create: createActions => {
-      if (typeof createActions === 'function') {
-        return createActions(createContractActions(router))
+    create: routerOrFactory => {
+      if (typeof routerOrFactory === 'function') {
+        return routerOrFactory(createContractActions<TContract, TContext, RootContract>(contract))
       }
 
-      return createActions
+      return routerOrFactory
     },
   }
 }
 
-const RESTRICTED_ROUTER_NAMES: string[] = []
-function extractRouters<TContract extends ContractRouterType, TContext extends object>(
-  contract: TContract
-): Routers<TContract, TContext, TContract> {
+function extractRouters<
+  TContract extends ContractRouterType,
+  TContext,
+  RootContract extends ContractRouterType,
+>(contract: TContract): Routers<TContract, TContext, RootContract> {
   const routers: Record<string, AnyRouterCreator> = {}
 
   function traverse(node: ContractRouterType) {
     for (const key in node) {
       const subRouter = node[key]
-      if (typeof subRouter === 'object' && subRouter !== null) {
-        if (isContractRouter(subRouter)) {
-          if (RESTRICTED_ROUTER_NAMES.includes(key)) {
-            throw new Error(`Router name "${key}" is restricted and cannot be used.`)
-          }
-          routers[key] = getRouterCreator(subRouter)
-          traverse(subRouter as ContractRouterType)
-        }
+      if (subRouter && typeof subRouter === 'object' && isContractRouter(subRouter)) {
+        routers[key] = getRouterCreator<ContractRouterType, TContext, RootContract>(subRouter)
+        traverse(subRouter)
       }
     }
   }
 
   traverse(contract)
 
-  return routers as Routers<TContract, TContext, TContract>
+  return routers as Routers<TContract, TContext, RootContract>
 }
 
-function createRouterFactory<TContract extends ContractRouterType, TContext extends object>(
+function createRouterFactory<TContract extends ContractRouterType, TContext>(
   contract: TContract
 ): Routers<TContract, TContext, TContract> {
-  return { ...getRouterCreator(contract), ...extractRouters(contract) }
+  return {
+    ...getRouterCreator<TContract, TContext, TContract>(contract),
+    ...extractRouters<TContract, TContext, TContract>(contract),
+  }
 }
 
-export type { RouterCreator, Router, AnyRouter }
-export { createRouterFactory }
+export type { AnyRouter, Router, RouterCreator, RouterActionsBuilder }
+export { createActionBuilder, createRouterFactory }

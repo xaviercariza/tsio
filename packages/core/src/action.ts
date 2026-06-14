@@ -1,6 +1,15 @@
-import type { ContractRouterType } from './contract'
-import type { EmitEventToFunction } from './emitter'
-import type { MaybePromise, TResponse, UnsetMarker } from './types'
+import type { z } from 'zod'
+import type { ContractRouterType, EmitEventToFunction } from './contract'
+import type { AnyMiddlewareFn } from './middleware'
+import type { MaybePromise, TResponse } from './types'
+
+type ActionRuntimeDefinition = {
+  input?: z.ZodTypeAny
+  response?: z.ZodTypeAny
+  validateInput: boolean
+  validateResponse: boolean
+  middlewares: AnyMiddlewareFn[]
+}
 
 interface ActionCallOptions<Contract extends ContractRouterType, TContext, TInput> {
   path: string
@@ -10,19 +19,33 @@ interface ActionCallOptions<Contract extends ContractRouterType, TContext, TInpu
 }
 
 type ActionResolverParams<Contract extends ContractRouterType, TContext, TInput> = {
+  path: string
   ctx: TContext
   input: TInput
   emitEventTo: EmitEventToFunction<Contract>
 }
 
+type ActionResult<TOutput> = TOutput extends void ? void : TResponse<TOutput>
+
 type AnyActionResolver = ActionResolver<any, any, any, any>
 type ActionResolver<Contract extends ContractRouterType, TContext, TInput, TOutput> = (
   params: ActionResolverParams<Contract, TContext, TInput>
-) => MaybePromise<TOutput extends UnsetMarker ? void : TResponse<TOutput>>
+) => MaybePromise<ActionResult<TOutput>>
 
 type AnyAction = Action<any, any, any, any>
-type Action<Contract extends ContractRouterType, TContext, TInput, TOutput> = (
+type Action<Contract extends ContractRouterType, TContext, TInput, TOutput> = ((
   params: ActionCallOptions<Contract, TContext, TInput>
-) => TOutput extends UnsetMarker ? MaybePromise<void> : MaybePromise<TResponse<TOutput>>
+) => MaybePromise<ActionResult<TOutput>>) & {
+  _def?: ActionRuntimeDefinition
+}
 
-export type { ActionCallOptions, AnyActionResolver, ActionResolver, AnyAction, Action }
+export type {
+  Action,
+  ActionCallOptions,
+  ActionResolver,
+  ActionResolverParams,
+  ActionResult,
+  ActionRuntimeDefinition,
+  AnyAction,
+  AnyActionResolver,
+}

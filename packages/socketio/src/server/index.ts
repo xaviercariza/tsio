@@ -2,14 +2,14 @@ import type { ContractAction, TsIoServerAdapter, TsIoServerEmitter } from '@tsio
 import type { Socket } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
 
-type TsIoScoketIoSocket = Socket & { id?: string }
+type TsIoSocketIoSocket = Socket & { id?: string }
 
 function createSocketIoServerAdapter<Action extends ContractAction>(
-  socket: TsIoScoketIoSocket
+  socket: TsIoSocketIoSocket
 ): TsIoServerAdapter<Action> {
   const emitToClient: TsIoServerEmitter = (socketId, response) => {
     const { event, data } = response
-    socket.broadcast.emit(event, data)
+    socket.to(socketId).emit(event, data)
   }
 
   return {
