@@ -1,0 +1,132 @@
+# Getting Started
+
+This guide creates a minimal typed realtime API with one action and one listener.
+
+## Install
+
+```bash
+pnpm add @tsio/core zod
+```
+
+Then install one transport adapter:
+
+```bash
+pnpm add @tsio/socketio socket.io socket.io-client
+```
+
+or:
+
+```bash
+pnpm add @tsio/ws ws
+```
+
+## Define a contract
+
+```ts
+import { defineContract } from '@tsio/core'
+import { z } from 'zod'
+
+const MessageSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+})
+
+export const contract = defineContract({
+  chat: {
+    sendMessage: {
+      type: 'action',
+      input: z.object({ text: z.string() }),
+      response: MessageSchema,
+    },
+    onMessage: {
+      type: 'listener',
+      data: MessageSchema,
+    },
+  },
+})
+```
+
+The contract is the source of truth for action input, action response, listener payloads, and nested dot paths.
+
+## Create the server router
+
+```ts
+import { initTsIo } from '@tsio/core'
+import { contract } from './contract'
+
+type Context = {
+  userId: string
+}
+
+const tsIo = initTsIo.context<Context>().create(contract)
+
+export const router = tsIo.router.create(a => ({
+  chat: {
+    sendMessage: a.chat.sendMessage.handler(({ ctx, input, emitEventTo }) => {
+      const message = {
+        id: crypto.randomUUID(),
+        text: input.text,
+      }
+
+      emitEventTo('chat.onMessage', ctx.userId, message)
+
+      return {
+        success: true,
+        data: message,
+      }
+    }),
+  },
+}))
+```
+
+The handler receives typed `ctx`, `input`, `path`, and `emitEventTo`.
+
+## Create a typed client
+
+```ts
+import { initNewClient } from '@tsio/core'
+import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { io } from 'socket.io-client'
+import { contract } from './contract'
+
+const socket = io('http://localhost:3000')
+const adapter = createSocketIoClientAdapter(socket)
+const client = initNewClient(adapter, contract)
+```
+
+Now the client is fully typed:
+
+```ts
+const result = await client.actions.chat.sendMessage({ text: 'Hello' })
+
+client.listeners.chat.onMessage(message => {
+  message.id
+  message.text
+})
+```
+
+## Attach the router
+
+Socket.IO example:
+
+```ts
+import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+
+io.on('connection', socket => {
+  const adapter = createSocketIoServerAdapter(socket)
+
+  tsIo.attachRouterToSocket({
+    router,
+    adapter,
+    createContext: () => ({ userId: socket.id }),
+  })
+})
+```
+
+The router is attached per connection so every action call receives a fresh context.
+
+## Next steps
+
+- Learn the contract model in [Core Concepts](/docs/core-concepts).
+- Add authentication with [Middleware](/docs/middleware).
+- Choose a transport in [Transports](/docs/transports).
