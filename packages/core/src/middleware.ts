@@ -76,6 +76,14 @@ export const isMiddlewareResolver = (
   return middleware.type === 'resolver'
 }
 
+function getMiddlewaresFromInput(
+  middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder
+): AnyMiddlewareFunction[] {
+  return typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
+    ? middlewareBuilderOrFn._middlewares
+    : [middlewareBuilderOrFn]
+}
+
 export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
   function createMiddlewareInner<TBaseContext, TContextOverrides, TInput>(
     middlewares: AnyMiddlewareFunction[]
@@ -85,10 +93,9 @@ export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
       pipe<TRequiredContext, TNextContextOverrides extends object>(middlewareBuilderOrFn: Simplify<Overwrite<TBaseContext, TContextOverrides>> extends TRequiredContext
         ? MiddlewareFunction<TRequiredContext, TNextContextOverrides, any> | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
         : never) {
-        const pipedMiddlewares =
-          typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
-            ? middlewareBuilderOrFn._middlewares
-            : [middlewareBuilderOrFn]
+        const pipedMiddlewares = getMiddlewaresFromInput(
+          middlewareBuilderOrFn as AnyMiddlewareFunction | AnyMiddlewareBuilder
+        )
 
         return createMiddlewareInner<
           TBaseContext,
