@@ -6,29 +6,32 @@ type Merge<T, U> = (T extends object
     }
   : unknown) &
   U
-function deepMerge<T extends object>(target: T, source: T): T {
-  const isObject = (obj: any) => obj && typeof obj === 'object'
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function deepMerge<T extends object>(target: T, source: T): T {
   if (!isObject(target) || !isObject(source)) {
     return source
   }
 
+  const result = { ...target } as Record<string, unknown>
+
   Object.keys(source).forEach(key => {
-    const anyTarget = target as any
-    const anySource = source as any
-    const targetValue = anyTarget[key]
-    const sourceValue = anySource[key]
+    const targetValue = result[key]
+    const sourceValue = source[key]
 
     if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
-      anyTarget[key] = sourceValue.concat(targetValue)
+      result[key] = sourceValue.concat(targetValue)
     } else if (isObject(targetValue) && isObject(sourceValue)) {
-      anyTarget[key] = deepMerge(Object.assign({}, targetValue), sourceValue)
+      result[key] = deepMerge(targetValue, sourceValue)
     } else {
-      anyTarget[key] = sourceValue
+      result[key] = sourceValue
     }
   })
 
-  return target
+  return result as T
 }
 
 function mergeWithoutOverrides<TType extends Record<string, unknown>>(
@@ -53,6 +56,7 @@ type MergedContracts<R extends ContractRouterType[]> = R extends [infer First, .
     ? Merge<First, MergedContracts<Rest>>
     : never
   : unknown
+
 const mergeContracts = <R extends ContractRouterType[]>(...routers: R): MergedContracts<R> => {
   return routers.reduce((prev, current) => {
     return deepMerge(prev, current)
