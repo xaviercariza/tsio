@@ -1,0 +1,109 @@
+# Server Routers
+
+A server router implements the action leaves from a contract.
+
+```ts
+const tsIo = initTsIo.context<Context>().create(contract)
+
+const router = tsIo.router.create(a => ({
+  chat: {
+    sendMessage: a.chat.sendMessage.handler(async ({ ctx, input, path, emitEventTo }) => {
+      const message = await saveMessage(ctx.user.id, input.text)
+
+      emitEventTo('chat.onMessage', ctx.user.socketId, message)
+
+      return { success: true, data: message }
+    }),
+  },
+}))
+```
+
+## Handler parameters
+
+Every handler receives:
+
+```ts
+{
+  path: string
+  ctx: Context
+  input: ActionInput
+  emitEventTo: EmitEventToFunction
+}
+```
+
+`input` is inferred from the action input schema. `ctx` is inferred from `initTsIo.context<Context>()`, plus any middleware refinements.
+
+## Fire-and-forget actions
+
+Fire-and-forget actions do not define a response schema.
+
+```ts
+updateTypingState: {
+  type: 'action',
+  input: TypingStateSchema,
+}
+```
+
+The handler returns `void`:
+
+```ts
+a.chat.updateTypingState.handler(({ input, emitEventTo }) => {
+  emitEventTo('chat.onUserTyping', input.chatId, input)
+})
+```
+
+## Request-response actions
+
+Request-response actions define a response schema.
+
+```ts
+sendMessage: {
+  type: 'action',
+  input: NewMessageSchema,
+  response: MessageSchema,
+}
+```
+
+The handler returns `TResponse<ResponseData>`:
+
+```ts
+a.chat.sendMessage.handler(async ({ input }) => {
+  const message = await saveMessage(input)
+
+  return {
+    success: true,
+    data: message,
+  }
+})
+```
+
+Error responses use the same discriminated union:
+
+```ts
+return {
+  success: false,
+  error: 'Could not send message',
+}
+```
+
+## Attaching a router
+
+The router is attached to a transport adapter.
+
+```ts
+tsIo.attachRouterToSocket({
+  router,
+  adapter,
+  createContext: () => ({ user, socket }),
+})
+```
+
+`createContext` is called for each action invocation. Keep it cheap and deterministic.
+
+## Best practices
+
+Do not put business logic directly in transport setup. Create the router separately, then attach it inside the connection handler.
+
+Use middleware for cross-cutting concerns such as auth, logging, request IDs, or rate limiting.
+
+Return explicit error responses for expected domain failures. Throw for unexpected failures.
