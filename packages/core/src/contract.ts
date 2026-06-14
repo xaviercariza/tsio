@@ -5,7 +5,7 @@ type ActionOptions = {
   validate?: boolean
 }
 
-type ListenerOptions = {
+type EventOptions = {
   validate?: boolean
 }
 
@@ -27,39 +27,39 @@ type TActionWithAck<
 }
 
 type IoAction = TBaseAction | TActionWithAck
-type IoListener<TData extends z.ZodTypeAny = z.ZodTypeAny> = ListenerOptions & {
-  type: 'listener'
+type IoEvent<TData extends z.ZodTypeAny = z.ZodTypeAny> = EventOptions & {
+  type: 'event'
   data: TData
 }
 
-type ContractType = 'action' | 'listener'
+type ContractType = 'action' | 'event'
 type ContractAction = IoAction
-type ContractListener = IoListener
+type ContractEvent = IoEvent
 type ContractRouterType = {
-  [key: string]: ContractRouterType | ContractAction | ContractListener
+  [key: string]: ContractRouterType | ContractAction | ContractEvent
 }
 
-const defineContract = <TContractRouter extends ContractRouterType>(
+const contract = <TContractRouter extends ContractRouterType>(
   definition: TContractRouter
 ): TContractRouter => definition
 
 const isContractRouter = (
-  contract: ContractRouterType | ContractAction | ContractListener
-): contract is ContractRouterType => {
-  const type = (contract as { type?: unknown }).type
-  return type !== 'action' && type !== 'listener'
+  node: ContractRouterType | ContractAction | ContractEvent
+): node is ContractRouterType => {
+  const type = (node as { type?: unknown }).type
+  return type !== 'action' && type !== 'event'
 }
 
-const isContractListener = (
-  contract: ContractRouterType | ContractAction | ContractListener
-): contract is ContractListener => {
-  return (contract as { type?: unknown }).type === 'listener'
+const isContractEvent = (
+  node: ContractRouterType | ContractAction | ContractEvent
+): node is ContractEvent => {
+  return (node as { type?: unknown }).type === 'event'
 }
 
 const isContractAction = (
-  contract: ContractRouterType | ContractAction | ContractListener
-): contract is ContractAction => {
-  return (contract as { type?: unknown }).type === 'action'
+  node: ContractRouterType | ContractAction | ContractEvent
+): node is ContractAction => {
+  return (node as { type?: unknown }).type === 'action'
 }
 
 const isActionWithAck = (action: ContractAction): action is TActionWithAck => {
@@ -74,25 +74,25 @@ type InferActionOutput<Action> = Action extends { response: infer Output extends
   ? InferSchema<Output>
   : void
 
-type InferListenerData<Listener> = Listener extends { data: infer Data extends z.ZodTypeAny }
+type InferEventData<Event> = Event extends { data: infer Data extends z.ZodTypeAny }
   ? InferSchema<Data>
   : never
 
 type AnyContractActions = ContractActions<any>
 type ContractActions<Contract extends ContractRouterType> = {
-  [K in keyof Contract as Contract[K] extends ContractListener ? never : K]: Contract[K] extends ContractAction
+  [K in keyof Contract as Contract[K] extends ContractEvent ? never : K]: Contract[K] extends ContractAction
     ? Contract[K]
     : Contract[K] extends ContractRouterType
       ? ContractActions<Contract[K]>
       : never
 }
 
-type AnyContractListeners = ContractListeners<any>
-type ContractListeners<Contract extends ContractRouterType> = {
-  [K in keyof Contract as Contract[K] extends ContractAction ? never : K]: Contract[K] extends ContractListener
+type AnyContractEvents = ContractEvents<any>
+type ContractEvents<Contract extends ContractRouterType> = {
+  [K in keyof Contract as Contract[K] extends ContractAction ? never : K]: Contract[K] extends ContractEvent
     ? Contract[K]
     : Contract[K] extends ContractRouterType
-      ? ContractListeners<Contract[K]>
+      ? ContractEvents<Contract[K]>
       : never
 }
 
@@ -115,35 +115,36 @@ type ValueAtPath<T, P extends string> = P extends `${infer Key}.${infer Rest}`
     ? T[P]
     : never
 
-type EmitEventToFunction<Contract extends ContractRouterType> = <
-  ListenerKey extends ContractPaths<Contract, 'listener'>,
+type EmitFunction<Contract extends ContractRouterType> = <
+  EventKey extends ContractPaths<Contract, 'event'>,
 >(
-  listenerKey: ListenerKey,
+  event: EventKey,
   socketId: string,
-  data: InferListenerData<ValueAtPath<Contract, ListenerKey>>
+  data: InferEventData<ValueAtPath<Contract, EventKey>>
 ) => void
 
-type AnyEmitEventToFunction = EmitEventToFunction<any>
+type AnyEmitFunction = EmitFunction<any>
 
-export { defineContract, isActionWithAck, isContractAction, isContractListener, isContractRouter }
+export { contract, isActionWithAck, isContractAction, isContractEvent, isContractRouter }
 export type {
   ActionOptions,
   AnyContractActions,
-  AnyContractListeners,
-  AnyEmitEventToFunction,
+  AnyContractEvents,
+  AnyEmitFunction,
   ContractAction,
   ContractActions,
-  ContractListener,
-  ContractListeners,
+  ContractEvent,
+  ContractEvents,
   ContractPaths,
   ContractRouterType,
   ContractType,
-  EmitEventToFunction,
+  EmitFunction,
+  EventOptions,
   InferActionInput,
   InferActionOutput,
-  InferListenerData,
+  InferEventData,
   IoAction,
-  IoListener,
+  IoEvent,
   TActionWithAck,
   TBaseAction,
   ValueAtPath,
