@@ -1,6 +1,6 @@
 # Chat Protocol
 
-This guide outlines a practical chat protocol using actions and listeners.
+This guide outlines a practical chat protocol using actions and events.
 
 ## Contract
 
@@ -13,7 +13,7 @@ const MessageSchema = z.object({
   createdAt: z.string(),
 })
 
-export const chatContract = defineContract({
+export const chatApi = contract({
   chat: {
     sendMessage: {
       type: 'action',
@@ -32,11 +32,11 @@ export const chatContract = defineContract({
       }),
     },
     onMessageReceived: {
-      type: 'listener',
+      type: 'event',
       data: MessageSchema,
     },
     onTypingStateChanged: {
-      type: 'listener',
+      type: 'event',
       data: z.object({
         chatId: z.string(),
         userId: z.string(),
@@ -50,9 +50,9 @@ export const chatContract = defineContract({
 ## Server router
 
 ```ts
-const router = tsIo.router.create(a => ({
+const router = tsio.router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.use(requireUser).handler(async ({ ctx, input, emitEventTo }) => {
+    sendMessage: a.chat.sendMessage.use(requireUser).handle(async ({ ctx, input, emit }) => {
       const message = await messages.create({
         chatId: input.chatId,
         senderId: ctx.user.id,
@@ -62,16 +62,16 @@ const router = tsIo.router.create(a => ({
       const recipients = await chats.getParticipantSocketIds(input.chatId)
 
       for (const socketId of recipients) {
-        emitEventTo('chat.onMessageReceived', socketId, message)
+        emit('chat.onMessageReceived', socketId, message)
       }
 
       return { success: true, data: message }
     }),
-    updateTypingState: a.chat.updateTypingState.use(requireUser).handler(async ({ ctx, input, emitEventTo }) => {
+    updateTypingState: a.chat.updateTypingState.use(requireUser).handle(async ({ ctx, input, emit }) => {
       const recipients = await chats.getParticipantSocketIds(input.chatId)
 
       for (const socketId of recipients) {
-        emitEventTo('chat.onTypingStateChanged', socketId, {
+        emit('chat.onTypingStateChanged', socketId, {
           chatId: input.chatId,
           userId: ctx.user.id,
           isTyping: input.isTyping,
@@ -90,11 +90,11 @@ await client.actions.chat.sendMessage({
   text: 'Hello',
 })
 
-client.listeners.chat.onMessageReceived(message => {
+client.events.chat.onMessageReceived(message => {
   addMessageToUi(message)
 })
 
-client.listeners.chat.onTypingStateChanged(event => {
+client.events.chat.onTypingStateChanged(event => {
   updateTypingIndicator(event)
 })
 ```
