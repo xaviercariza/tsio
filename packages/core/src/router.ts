@@ -10,9 +10,12 @@ import {
   isContractRouter,
 } from './contract'
 import {
+  type AnyMiddlewareBuilder,
   type AnyMiddlewareFn,
+  type AnyMiddlewareFunction,
   type MiddlewareBuilder,
-  type MiddlewareFunction,
+  type MiddlewareContextOut,
+  type MiddlewareInput,
   type MiddlewareResult,
   isMiddlewareResolver,
 } from './middleware'
@@ -57,14 +60,12 @@ export interface ActionBuilder<
   TOutput,
 > {
   _def: ActionRuntimeDefinition
-  use<TRequiredContext, TContextOut extends object>(
-    fn: TCurrentContext extends TRequiredContext
-      ? MiddlewareFunction<TRequiredContext, TContextOut, any> | MiddlewareBuilder<TRequiredContext, TContextOut, any>
-      : never
+  use<TRequiredContext, TMiddleware extends MiddlewareInput<TRequiredContext, any>>(
+    fn: TCurrentContext extends TRequiredContext ? TMiddleware : never
   ): ActionBuilder<
     RootContract,
     TInitialContext,
-    Overwrite<TCurrentContext, TContextOut>,
+    Overwrite<TCurrentContext, MiddlewareContextOut<TMiddleware>>,
     TInput,
     TOutput
   >
@@ -99,6 +100,14 @@ type Routers<
     : never
 }
 
+function getMiddlewareFnsFromInput(
+  middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder
+): AnyMiddlewareFunction[] {
+  return typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
+    ? middlewareBuilderOrFn._middlewares
+    : [middlewareBuilderOrFn]
+}
+
 function createActionBuilder<
   RootContract extends ContractRouterType,
   TInitialContext,
@@ -106,13 +115,10 @@ function createActionBuilder<
   TInput,
   TOutput,
 >(def: ActionRuntimeDefinition): ActionBuilder<RootContract, TInitialContext, TCurrentContext, TInput, TOutput> {
-  const builder: AnyActionBuilder = {
+  const builder = {
     _def: def,
-    use(middlewareBuilderOrFn) {
-      const middlewares =
-        typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
-          ? middlewareBuilderOrFn._middlewares
-          : [middlewareBuilderOrFn]
+    use(middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder) {
+      const middlewares = getMiddlewareFnsFromInput(middlewareBuilderOrFn)
 
       return createActionBuilder({
         ...def,
@@ -122,7 +128,7 @@ function createActionBuilder<
         ],
       })
     },
-    handler(resolver) {
+    handler(resolver: ActionResolver<any, any, any, any>) {
       return createResolver(def, resolver)
     },
   }
