@@ -89,7 +89,7 @@ const getListener = <Listener extends ContractListener, Adapter extends TsIoClie
 
 const createClientActions = <
   TContract extends ContractRouterType,
-  Adapter extends TsIoClientAdapter<ContractRouterType>,
+  Adapter extends TsIoClientAdapter<any>,
 >(
   contract: TContract,
   adapter: Adapter,
@@ -122,7 +122,7 @@ const createClientActions = <
 
 const createClientListeners = <
   TContract extends ContractRouterType,
-  Adapter extends TsIoClientAdapter<ContractRouterType>,
+  Adapter extends TsIoClientAdapter<any>,
 >(
   contract: TContract,
   adapter: Adapter,
@@ -148,7 +148,7 @@ const createClientListeners = <
 
 const initNewClient = <
   Contract extends ContractRouterType,
-  Adapter extends TsIoClientAdapter<ContractRouterType>,
+  Adapter extends TsIoClientAdapter<any>,
 >(
   adapter: Adapter,
   contract: Contract
