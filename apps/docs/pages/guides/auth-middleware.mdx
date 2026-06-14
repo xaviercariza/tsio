@@ -1,0 +1,86 @@
+# Auth Middleware
+
+This guide shows how to make authenticated handlers receive a non-null user.
+
+## Context
+
+Start with a nullable user because unauthenticated connections may exist:
+
+```ts
+type Context = {
+  user: User | null
+  socketId: string
+}
+
+const tsIo = initTsIo.context<Context>().create(contract)
+```
+
+## Middleware
+
+```ts
+const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    return {
+      ok: false,
+      error: new Error('Unauthorized'),
+    }
+  }
+
+  return next({
+    ctx: {
+      user: ctx.user,
+    },
+  })
+})
+```
+
+`ctx.user` is narrowed to `User` after the guard. `next({ ctx })` forwards that refined type.
+
+## Protected handler
+
+```ts
+const router = tsIo.router.create(a => ({
+  account: {
+    updateProfile: a.account.updateProfile.use(requireUser).handler(({ ctx, input }) => {
+      ctx.user.id // User
+      return updateProfile(ctx.user.id, input)
+    }),
+  },
+}))
+```
+
+The handler does not need to check `ctx.user` again.
+
+## Add authorization
+
+You can pipe another middleware after authentication:
+
+```ts
+const requireAdmin = requireUser.pipe(async ({ ctx, next }) => {
+  if (ctx.user.role !== 'admin') {
+    return { ok: false, error: new Error('Forbidden') }
+  }
+
+  return next({ ctx: { isAdmin: true as const } })
+})
+```
+
+Now admin handlers receive both refinements:
+
+```ts
+a.admin.deleteUser.use(requireAdmin).handler(({ ctx }) => {
+  ctx.user    // User
+  ctx.isAdmin // true
+})
+```
+
+## Best practices
+
+Create one middleware per concern:
+
+- `requireUser`
+- `requireAdmin`
+- `loadOrganization`
+- `requireOrganizationRole`
+
+Keep each middleware small and composable. Avoid putting the actual business operation in middleware.
