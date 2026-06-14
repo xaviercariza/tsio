@@ -1,4 +1,4 @@
-import { defineContract, initTsIo } from '@tsio/core'
+import { contract, createServer } from '@tsio/core'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
@@ -8,7 +8,7 @@ const PostSchema = z.object({
   body: z.string().optional(),
 })
 
-const contract = defineContract({
+const api = contract({
   actionsRouter: {
     actionWithoutMiddlewares: {
       type: 'action',
@@ -23,13 +23,13 @@ const contract = defineContract({
       input: PostSchema.omit({ id: true }),
     },
   },
-  listenersRouter: {},
+  eventsRouter: {},
 })
 
 type Context = { userName: string }
 
 const initialContext = { userName: 'Xavier' }
-const s = initTsIo.context<Context>().create(contract)
+const s = createServer.context<Context>().create(api)
 const emptyContextMiddleware = s.middleware(
   vi.fn().mockImplementation(opts => {
     return opts.next()
@@ -51,17 +51,17 @@ const actionWithEmptyMiddlewareHandler = vi.fn()
 const actionWithUserMiddlewareHandler = vi.fn()
 
 const actionsRouter = s.router.actionsRouter.create(a => ({
-  actionWithoutMiddlewares: a.actionWithoutMiddlewares.handler(actionWithoutMiddlewaresHandler),
+  actionWithoutMiddlewares: a.actionWithoutMiddlewares.handle(actionWithoutMiddlewaresHandler),
   actionWithEmptyMiddleware: a.actionWithEmptyMiddleware
     .use(emptyContextMiddleware)
-    .handler(actionWithEmptyMiddlewareHandler),
+    .handle(actionWithEmptyMiddlewareHandler),
   actionWithUserMiddleware: a.actionWithUserMiddleware
     .use(userMiddleware)
-    .handler(actionWithUserMiddlewareHandler),
+    .handle(actionWithUserMiddlewareHandler),
 }))
 const router = s.router.create({
   actionsRouter,
-  listenersRouter: {},
+  eventsRouter: {},
 })
 
 describe('middlewares', () => {
@@ -73,7 +73,7 @@ describe('middlewares', () => {
         title: 'This is the title',
         body: 'This is the body',
       },
-      emitTo: vi.fn(),
+      emit: vi.fn(),
     })
 
     expect(actionWithoutMiddlewaresHandler).toHaveBeenCalledTimes(1)
@@ -90,7 +90,7 @@ describe('middlewares', () => {
         title: 'This is the title',
         body: 'This is the body',
       },
-      emitTo: vi.fn(),
+      emit: vi.fn(),
     })
 
     expect(actionWithEmptyMiddlewareHandler).toHaveBeenCalledTimes(1)
@@ -109,7 +109,7 @@ describe('middlewares', () => {
         title: 'This is the title',
         body: 'This is the body',
       },
-      emitTo: vi.fn(),
+      emit: vi.fn(),
     })
 
     expect(actionWithUserMiddlewareHandler).toHaveBeenCalledTimes(1)
