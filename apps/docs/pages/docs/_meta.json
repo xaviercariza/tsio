@@ -8,5 +8,5 @@
   "middleware": "Middleware",
   "validation": "Runtime Validation",
   "transports": "Transports",
-  "testing": "Testing Strategy"
+  "testing": "Testing Your App"
 }
