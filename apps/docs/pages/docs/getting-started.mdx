@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide creates a minimal typed realtime API with one action and one listener.
+This guide creates a minimal typed realtime API with one action and one event.
 
 ## Install
 
@@ -23,7 +23,7 @@ pnpm add @tsio/ws ws
 ## Define a contract
 
 ```ts
-import { defineContract } from '@tsio/core'
+import { contract } from '@tsio/core'
 import { z } from 'zod'
 
 const MessageSchema = z.object({
@@ -31,7 +31,7 @@ const MessageSchema = z.object({
   text: z.string(),
 })
 
-export const contract = defineContract({
+export const api = contract({
   chat: {
     sendMessage: {
       type: 'action',
@@ -39,36 +39,36 @@ export const contract = defineContract({
       response: MessageSchema,
     },
     onMessage: {
-      type: 'listener',
+      type: 'event',
       data: MessageSchema,
     },
   },
 })
 ```
 
-The contract is the source of truth for action input, action response, listener payloads, and nested dot paths.
+The contract is the source of truth for action input, action response, event payloads, and nested dot paths.
 
 ## Create the server router
 
 ```ts
-import { initTsIo } from '@tsio/core'
-import { contract } from './contract'
+import { createServer } from '@tsio/core'
+import { api } from './contract'
 
 type Context = {
   userId: string
 }
 
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 
-export const router = tsIo.router.create(a => ({
+export const router = tsio.router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.handler(({ ctx, input, emitEventTo }) => {
+    sendMessage: a.chat.sendMessage.handle(({ ctx, input, emit }) => {
       const message = {
         id: crypto.randomUUID(),
         text: input.text,
       }
 
-      emitEventTo('chat.onMessage', ctx.userId, message)
+      emit('chat.onMessage', ctx.userId, message)
 
       return {
         success: true,
@@ -79,19 +79,19 @@ export const router = tsIo.router.create(a => ({
 }))
 ```
 
-The handler receives typed `ctx`, `input`, `path`, and `emitEventTo`.
+The handler receives typed `ctx`, `input`, `path`, and `emit`.
 
 ## Create a typed client
 
 ```ts
-import { initNewClient } from '@tsio/core'
-import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { createClient } from '@tsio/core'
+import { socketioClient } from '@tsio/socketio/client'
 import { io } from 'socket.io-client'
-import { contract } from './contract'
+import { api } from './contract'
 
 const socket = io('http://localhost:3000')
-const adapter = createSocketIoClientAdapter(socket)
-const client = initNewClient(adapter, contract)
+const adapter = socketioClient(socket)
+const client = createClient(api, adapter)
 ```
 
 Now the client is fully typed:
@@ -99,7 +99,7 @@ Now the client is fully typed:
 ```ts
 const result = await client.actions.chat.sendMessage({ text: 'Hello' })
 
-client.listeners.chat.onMessage(message => {
+client.events.chat.onMessage(message => {
   message.id
   message.text
 })
@@ -110,12 +110,12 @@ client.listeners.chat.onMessage(message => {
 Socket.IO example:
 
 ```ts
-import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+import { socketio } from '@tsio/socketio/server'
 
 io.on('connection', socket => {
-  const adapter = createSocketIoServerAdapter(socket)
+  const adapter = socketio(socket)
 
-  tsIo.attachRouterToSocket({
+  tsio.attach({
     router,
     adapter,
     createContext: () => ({ userId: socket.id }),
