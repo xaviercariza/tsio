@@ -2,50 +2,48 @@
 
 This page summarizes the public API exported from `@tsio/core`.
 
-## `defineContract`
+## `contract`
 
-Defines a typed protocol contract.
+Defines a typed protocol contract and preserves literal and schema types.
 
 ```ts
-const contract = defineContract({
+const api = contract({
   chat: {
     sendMessage: {
       type: 'action',
       input: z.object({ text: z.string() }),
       response: MessageSchema,
     },
+    onMessage: {
+      type: 'event',
+      data: MessageSchema,
+    },
   },
 })
 ```
 
-The function returns the same object while preserving literal and schema types.
+## `createServer`
 
-## `initTsIo`
-
-Creates a typed builder for a contract.
+Creates a typed server builder for a contract.
 
 ```ts
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 ```
 
-Returns:
+The returned object contains:
 
-```ts
-{
-  router,
-  middleware,
-  attachRouterToSocket,
-}
-```
+- `router`
+- `middleware`
+- `attach`
 
 ## `router.create`
 
 Creates a server router from action builders.
 
 ```ts
-const router = tsIo.router.create(a => ({
+const router = tsio.router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.handler(handler),
+    sendMessage: a.chat.sendMessage.handle(handler),
   },
 }))
 ```
@@ -53,8 +51,8 @@ const router = tsIo.router.create(a => ({
 Nested router factories are also available:
 
 ```ts
-const chatRouter = tsIo.router.chat.create(a => ({
-  sendMessage: a.sendMessage.handler(handler),
+const chatRouter = tsio.router.chat.create(a => ({
+  sendMessage: a.sendMessage.handle(handler),
 }))
 ```
 
@@ -63,53 +61,38 @@ const chatRouter = tsIo.router.chat.create(a => ({
 Creates middleware that can refine the handler context.
 
 ```ts
-const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+const requireUser = tsio.middleware(async ({ ctx, next }) => {
   if (!ctx.user) return { ok: false, error: new Error('Unauthorized') }
   return next({ ctx: { user: ctx.user } })
 })
 ```
 
-Middleware can be used directly or piped:
+Middleware can be used directly or piped.
 
-```ts
-a.secureAction.use(requireUser).handler(handler)
-
-const requireAdmin = requireUser.pipe(adminMiddleware)
-```
-
-## `attachRouterToSocket`
+## `attach`
 
 Attaches a server router to a transport adapter.
 
 ```ts
-tsIo.attachRouterToSocket({
-  router,
-  adapter,
-  createContext,
-})
+tsio.attach({ router, adapter, createContext })
 ```
 
-## `initNewClient`
+## `createClient`
 
-Creates a typed client from a client adapter and contract.
+Creates a typed client from a contract and client adapter.
 
 ```ts
-const client = initNewClient(adapter, contract)
+const client = createClient(api, adapter)
 ```
 
-The client exposes:
-
-```ts
-client.actions
-client.listeners
-```
+The client exposes `client.actions` and `client.events`.
 
 ## `mergeContracts`
 
 Merges multiple contract objects.
 
 ```ts
-const contract = mergeContracts(authContract, chatContract, presenceContract)
+const api = mergeContracts(authApi, chatApi, presenceApi)
 ```
 
 Use this when splitting a large protocol across files.
@@ -125,9 +108,11 @@ TsIoServerAdapter
 TsIoServerEmitter
 ContractAction
 ContractActions
-ContractListeners
+ContractEvent
+ContractEvents
 ContractPaths
 ContractRouterType
+EmitFunction
 Router
 RouterCreator
 MiddlewareResult
