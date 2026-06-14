@@ -44,17 +44,6 @@ const contract = defineContract({
 
 From that contract, the server and client both receive inferred types.
 
-## How it differs from tRPC
-
-`tRPC` is router-first: the server implementation is the source of truth and the client imports the router type.
-
-`tsio` is contract-first: the protocol is declared independently of the server implementation. That is useful for bidirectional systems because the protocol includes both directions:
-
-- actions: client to server
-- listeners: server to client
-
-This makes `tsio` a better fit for socket-style protocols than for plain CRUD APIs.
-
 ## When to use it
 
 Use `tsio` when your app needs typed live communication:
@@ -66,4 +55,8 @@ Use `tsio` when your app needs typed live communication:
 - admin consoles with realtime feedback
 - internal tools using Socket.IO or `ws`
 
-For plain request/response HTTP APIs, `tsio` is usually not the right tool. Use `fetch`, tRPC, or another HTTP-focused RPC approach instead.
+For plain request/response HTTP APIs, `tsio` is usually not the right tool. Use an HTTP-focused API approach instead.
+
+## Next steps
+
+Start with [Getting Started](/docs/getting-started), then read [Core Concepts](/docs/core-concepts) to understand contracts, actions, listeners, routers, clients, and middleware.
