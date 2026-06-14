@@ -9,7 +9,7 @@ It lets you describe the messages your application understands once, then reuse 
 - generated client listeners
 - server-to-client event emission
 - middleware context refinement
-- transport adapters such as Socket.IO and `ws`
+- Socket.IO and `ws` transport adapters
 
 ## The problem
 
@@ -66,12 +66,4 @@ Use `tsio` when your app needs typed live communication:
 - admin consoles with realtime feedback
 - internal tools using Socket.IO or `ws`
 
-For plain request/response HTTP APIs, use `fetch`, tRPC, or a future HTTP adapter rather than forcing sockets into the architecture.
-
-## Current status
-
-`tsio` is pre-1.0. The core API is being refined, and the current production-ready surface is focused on:
-
-- `@tsio/core`
-- `@tsio/socketio`
-- `@tsio/ws`
+For plain request/response HTTP APIs, `tsio` is usually not the right tool. Use `fetch`, tRPC, or another HTTP-focused RPC approach instead.
