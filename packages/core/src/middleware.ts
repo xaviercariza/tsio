@@ -35,6 +35,37 @@ export type MiddlewareFunction<TContext, TContextOverridesOut, TInput> = (
   }
 ) => MaybePromise<MiddlewareResult<TContextOverridesOut>>
 
+type MiddlewareFactoryFunction<TContext, TInput> = (
+  opts: MiddlewareFunctionParams<TContext, TInput> & {
+    next: NextFunction
+  }
+) => MaybePromise<MiddlewareResult<any>>
+
+type AwaitedReturn<T> = T extends PromiseLike<infer Inner> ? AwaitedReturn<Inner> : T
+
+type InferContextFromMiddlewareResult<TResult> = Extract<
+  AwaitedReturn<TResult>,
+  { ok: true }
+> extends { ctx?: infer TContextOverride }
+  ? NonNullable<TContextOverride> extends object
+    ? NonNullable<TContextOverride>
+    : object
+  : object
+
+export type MiddlewareContextOut<TMiddleware> = TMiddleware extends MiddlewareBuilder<
+  any,
+  infer TContextOverrides,
+  any
+>
+  ? TContextOverrides
+  : TMiddleware extends (...args: any[]) => infer TResult
+    ? InferContextFromMiddlewareResult<TResult>
+    : object
+
+export type MiddlewareInput<TContext, TInput> =
+  | MiddlewareFactoryFunction<TContext, TInput>
+  | MiddlewareBuilder<TContext, any, any>
+
 type Middleware<TContext, TContextOverridesOut, TInput> = {
   type: 'middleware'
   fn: MiddlewareFunction<TContext, TContextOverridesOut, TInput>
@@ -60,11 +91,11 @@ export type AnyMiddlewareFunction = MiddlewareFunction<any, any, any>
 export type AnyMiddlewareResolver = MiddlewareResolver<any, any, any>
 
 export interface MiddlewareBuilder<TContext, TContextOverrides, TInput> {
-  pipe<TRequiredContext, TNextContextOverrides extends object>(
+  pipe<TRequiredContext, TMiddleware extends MiddlewareInput<TRequiredContext, any>>(
     fn: Simplify<Overwrite<TContext, TContextOverrides>> extends TRequiredContext
-      ? MiddlewareFunction<TRequiredContext, TNextContextOverrides, any> | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
+      ? TMiddleware
       : never
-  ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, TNextContextOverrides>, TInput>
+  ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, MiddlewareContextOut<TMiddleware>>, TInput>
   _middlewares: AnyMiddlewareFunction[]
 }
 
@@ -88,28 +119,24 @@ export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
   function createMiddlewareInner<TBaseContext, TContextOverrides, TInput>(
     middlewares: AnyMiddlewareFunction[]
   ): MiddlewareBuilder<TBaseContext, TContextOverrides, TInput> {
-    return {
+    const builder = {
       _middlewares: middlewares,
-      pipe<TRequiredContext, TNextContextOverrides extends object>(middlewareBuilderOrFn: Simplify<Overwrite<TBaseContext, TContextOverrides>> extends TRequiredContext
-        ? MiddlewareFunction<TRequiredContext, TNextContextOverrides, any> | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
-        : never) {
-        const pipedMiddlewares = getMiddlewaresFromInput(
-          middlewareBuilderOrFn as AnyMiddlewareFunction | AnyMiddlewareBuilder
-        )
+      pipe(middlewareBuilderOrFn: AnyMiddlewareFunction | AnyMiddlewareBuilder) {
+        const pipedMiddlewares = getMiddlewaresFromInput(middlewareBuilderOrFn)
 
-        return createMiddlewareInner<
-          TBaseContext,
-          Overwrite<TContextOverrides, TNextContextOverrides>,
-          TInput
-        >([...middlewares, ...pipedMiddlewares])
+        return createMiddlewareInner([...middlewares, ...pipedMiddlewares])
       },
     }
+
+    return builder as MiddlewareBuilder<TBaseContext, TContextOverrides, TInput>
   }
 
-  function createMiddleware<TContextOverrides extends object>(
-    fn: MiddlewareFunction<TContext, TContextOverrides, TInputOut>
-  ): MiddlewareBuilder<TContext, TContextOverrides, TInputOut> {
-    return createMiddlewareInner<TContext, TContextOverrides, TInputOut>([fn])
+  function createMiddleware<TMiddleware extends MiddlewareFactoryFunction<TContext, TInputOut>>(
+    fn: TMiddleware
+  ): MiddlewareBuilder<TContext, MiddlewareContextOut<TMiddleware>, TInputOut> {
+    return createMiddlewareInner<TContext, MiddlewareContextOut<TMiddleware>, TInputOut>([
+      fn as AnyMiddlewareFunction,
+    ])
   }
 
   return createMiddleware
