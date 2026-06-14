@@ -35,7 +35,7 @@ export type MiddlewareFunction<TContext, TContextOverridesOut, TInput> = (
   }
 ) => MaybePromise<MiddlewareResult<TContextOverridesOut>>
 
-type MiddlewareFactoryFunction<TContext, TInput> = (
+export type MiddlewareFactoryFunction<TContext, TInput> = (
   opts: MiddlewareFunctionParams<TContext, TInput> & {
     next: NextFunction
   }
@@ -43,14 +43,15 @@ type MiddlewareFactoryFunction<TContext, TInput> = (
 
 type AwaitedReturn<T> = T extends PromiseLike<infer Inner> ? AwaitedReturn<Inner> : T
 
-type InferContextFromMiddlewareResult<TResult> = Extract<
-  AwaitedReturn<TResult>,
-  { ok: true }
-> extends { ctx?: infer TContextOverride }
-  ? NonNullable<TContextOverride> extends object
-    ? NonNullable<TContextOverride>
+type InferContextFromMiddlewareResult<TResult> = [Extract<AwaitedReturn<TResult>, { ok: true }>] extends [
+  never,
+]
+  ? object
+  : Extract<AwaitedReturn<TResult>, { ok: true }> extends { ctx?: infer TContextOverride }
+    ? NonNullable<TContextOverride> extends object
+      ? NonNullable<TContextOverride>
+      : object
     : object
-  : object
 
 export type MiddlewareContextOut<TMiddleware> = TMiddleware extends MiddlewareBuilder<
   any,
@@ -91,11 +92,19 @@ export type AnyMiddlewareFunction = MiddlewareFunction<any, any, any>
 export type AnyMiddlewareResolver = MiddlewareResolver<any, any, any>
 
 export interface MiddlewareBuilder<TContext, TContextOverrides, TInput> {
-  pipe<TRequiredContext, TMiddleware extends MiddlewareInput<TRequiredContext, any>>(
-    fn: Simplify<Overwrite<TContext, TContextOverrides>> extends TRequiredContext
-      ? TMiddleware
-      : never
+  pipe<
+    TMiddleware extends MiddlewareFactoryFunction<
+      Simplify<Overwrite<TContext, TContextOverrides>>,
+      any
+    >,
+  >(
+    fn: TMiddleware
   ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, MiddlewareContextOut<TMiddleware>>, TInput>
+  pipe<TRequiredContext, TNextContextOverrides extends object>(
+    fn: Simplify<Overwrite<TContext, TContextOverrides>> extends TRequiredContext
+      ? MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
+      : never
+  ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, TNextContextOverrides>, TInput>
   _middlewares: AnyMiddlewareFunction[]
 }
 
