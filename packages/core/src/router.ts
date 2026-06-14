@@ -15,7 +15,7 @@ import {
   type AnyMiddlewareFunction,
   type MiddlewareBuilder,
   type MiddlewareContextOut,
-  type MiddlewareInput,
+  type MiddlewareFactoryFunction,
   type MiddlewareResult,
   isMiddlewareResolver,
 } from './middleware'
@@ -60,12 +60,23 @@ export interface ActionBuilder<
   TOutput,
 > {
   _def: ActionRuntimeDefinition
-  use<TRequiredContext, TMiddleware extends MiddlewareInput<TRequiredContext, any>>(
-    fn: TCurrentContext extends TRequiredContext ? TMiddleware : never
+  use<TMiddleware extends MiddlewareFactoryFunction<TCurrentContext, any>>(
+    fn: TMiddleware
   ): ActionBuilder<
     RootContract,
     TInitialContext,
     Overwrite<TCurrentContext, MiddlewareContextOut<TMiddleware>>,
+    TInput,
+    TOutput
+  >
+  use<TRequiredContext, TContextOut extends object>(
+    fn: TCurrentContext extends TRequiredContext
+      ? MiddlewareBuilder<TRequiredContext, TContextOut, any>
+      : never
+  ): ActionBuilder<
+    RootContract,
+    TInitialContext,
+    Overwrite<TCurrentContext, TContextOut>,
     TInput,
     TOutput
   >
