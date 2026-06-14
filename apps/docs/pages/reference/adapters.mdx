@@ -4,13 +4,13 @@ Adapters connect `@tsio/core` to concrete transports.
 
 ## Client adapter
 
-A client adapter sends actions, registers listener callbacks, and unsubscribes from listener events.
+A client adapter sends actions, registers event callbacks, and unsubscribes from events.
 
 ```ts
 type TsIoClientAdapter<Contract> = {
   emit(action, payload, callback?): void
-  on(listener, callback): void
-  unsubscribe(listener): void
+  on(event, callback): void
+  unsubscribe(event): void
 }
 ```
 
@@ -18,7 +18,7 @@ You usually do not implement this directly unless you are building a new transpo
 
 ## Server adapter
 
-A server adapter registers action handlers and emits listener events to a target client.
+A server adapter registers action handlers and emits events to a target client.
 
 ```ts
 type TsIoServerAdapter<Action> = {
@@ -27,9 +27,9 @@ type TsIoServerAdapter<Action> = {
 }
 ```
 
-`attachRouterToSocket` uses `on` to register each action path.
+`attach` uses `on` to register each action path.
 
-Handlers use `emitEventTo`, which delegates to `emitTo`.
+Handlers use `emit`, which delegates to `emitTo`.
 
 ## Message semantics
 
@@ -51,13 +51,13 @@ A new adapter should preserve these invariants:
 
 1. Action paths must be delivered to the matching server handler.
 2. Request-response actions must resolve with the handler response.
-3. Listener event payloads must be delivered to registered listener callbacks.
-4. `unsubscribe` must stop future callbacks for that listener.
+3. Event payloads must be delivered to registered event callbacks.
+4. `unsubscribe` must stop future callbacks for that event.
 5. Targeted emits must only deliver to the requested target when the transport supports targeting.
 
 ## Current adapters
 
-- `@tsio/socketio/client`
-- `@tsio/socketio/server`
-- `@tsio/ws/client`
-- `@tsio/ws/server`
+- `@tsio/socketio/client` exports `socketioClient`
+- `@tsio/socketio/server` exports `socketio`
+- `@tsio/ws/client` exports `wsClient`
+- `@tsio/ws/server` exports `ws`
