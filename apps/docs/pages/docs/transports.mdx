@@ -15,12 +15,12 @@ pnpm add @tsio/socketio socket.io socket.io-client
 Server adapter:
 
 ```ts
-import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+import { socketio } from '@tsio/socketio/server'
 
 io.on('connection', socket => {
-  const adapter = createSocketIoServerAdapter(socket)
+  const adapter = socketio(socket)
 
-  tsIo.attachRouterToSocket({
+  tsio.attach({
     router,
     adapter,
     createContext: () => ({ socket }),
@@ -31,11 +31,12 @@ io.on('connection', socket => {
 Client adapter:
 
 ```ts
-import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { createClient } from '@tsio/core'
+import { socketioClient } from '@tsio/socketio/client'
 import { io } from 'socket.io-client'
 
 const socket = io('http://localhost:3000')
-const client = initNewClient(createSocketIoClientAdapter(socket), contract)
+const client = createClient(api, socketioClient(socket))
 ```
 
 Choose Socket.IO when you want:
@@ -56,19 +57,20 @@ pnpm add @tsio/ws ws
 Server adapter:
 
 ```ts
-import { createWsServerProxy } from '@tsio/ws/server'
+import { ws } from '@tsio/ws/server'
 
-const adapter = createWsServerProxy(wss, socket)
-tsIo.attachRouterToSocket({ router, adapter, createContext })
+const adapter = ws(wss, socket)
+tsio.attach({ router, adapter, createContext })
 ```
 
 Client adapter:
 
 ```ts
-import { createWsClientProxy } from '@tsio/ws/client'
+import { createClient } from '@tsio/core'
+import { wsClient } from '@tsio/ws/client'
 
 const socket = new WebSocket('ws://localhost:3000')
-const client = initNewClient(createWsClientProxy(socket), contract)
+const client = createClient(api, wsClient(socket))
 ```
 
 Choose `ws` when you want:
@@ -84,7 +86,7 @@ Both adapters implement the same core concepts:
 
 - client actions are emitted to the server
 - request-response actions resolve with a typed response
-- server handlers can emit listener events to a connected client
-- client listeners receive typed payloads
+- server handlers can emit events to a connected client
+- client events receive typed payloads
 
 Transport-specific behavior such as connection setup, reconnection, rooms, and lifecycle management remains the responsibility of the transport package you choose.
