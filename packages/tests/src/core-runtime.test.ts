@@ -28,7 +28,10 @@ describe('core runtime', () => {
     })
     const ctx = { requestId: 'request-1' }
     const tsIo = initTsIo.context<typeof ctx>().create(contract)
-    const actionHandler = vi.fn(({ input }) => ({ success: true, data: { id: 'post-1', ...input } }))
+    const actionHandler = vi.fn(({ input }) => ({
+      success: true as const,
+      data: { id: 'post-1', ...input },
+    }))
     const router = tsIo.router.create(a => ({
       posts: {
         create: a.posts.create.handler(actionHandler),
@@ -62,7 +65,10 @@ describe('core runtime', () => {
       events: {},
     })
     const tsIo = initTsIo.context<object>().create(contract)
-    const actionHandler = vi.fn(() => ({ success: true, data: { id: 'post-1', title: 'Hello' } }))
+    const actionHandler = vi.fn(() => ({
+      success: true as const,
+      data: { id: 'post-1', title: 'Hello' },
+    }))
     const router = tsIo.router.create(a => ({
       posts: {
         create: a.posts.create.handler(actionHandler),
@@ -93,7 +99,7 @@ describe('core runtime', () => {
     const router = tsIo.router.create(a => ({
       posts: {
         create: a.posts.create.handler(({ input }) => ({
-          success: true,
+          success: true as const,
           data: { id: 123, title: input.title } as any,
         })),
       },
