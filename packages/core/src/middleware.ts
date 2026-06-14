@@ -1,72 +1,74 @@
-import type { AnyEmitEventToFunction } from './emitter'
-import type { Overwrite, Simplify } from './types'
+import type { AnyEmitEventToFunction } from './contract'
+import type { MaybePromise, Overwrite, Simplify } from './types'
 
-interface MiddlewareOKResult<_TContextOverride> {
+interface MiddlewareOKResult<TContextOverride = object> {
   ok: true
-  data: unknown
+  data?: unknown
+  ctx?: TContextOverride
 }
 
-interface MiddlewareErrorResult<_TContextOverride> {
+interface MiddlewareErrorResult {
   ok: false
   error: Error
 }
 
-export type MiddlewareResult<_TContextOverride> =
-  | MiddlewareErrorResult<_TContextOverride>
-  | MiddlewareOKResult<_TContextOverride>
+export type MiddlewareResult<TContextOverride = object> =
+  | MiddlewareErrorResult
+  | MiddlewareOKResult<TContextOverride>
 
-export interface MiddlewareBuilder<TContext, TContextOverrides, TInput> {
-  pipe<$ContextOverridesOut>(
-    fn:
-      | MiddlewareFunction<TContext, TContextOverrides, $ContextOverridesOut, TInput>
-      | MiddlewareBuilder<Overwrite<TContext, TContextOverrides>, $ContextOverridesOut, TInput>
-  ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, $ContextOverridesOut>, TInput>
-  _middlewares: MiddlewareFunction<TContext, TContextOverrides, object, TInput>[]
-}
-
-export type MiddlewareFunctionParams<TContext, TContextOverridesIn, TInput> = {
-  ctx: Simplify<Overwrite<TContext, TContextOverridesIn>>
+export type MiddlewareFunctionParams<TContext, TInput> = {
+  ctx: Simplify<TContext>
   path: string
   input: TInput
 }
-export type AnyMiddlewareFunctionParams = MiddlewareFunctionParams<any, any, any>
+export type AnyMiddlewareFunctionParams = MiddlewareFunctionParams<any, any>
 
-export type MiddlewareFunction<TContext, TContextOverridesIn, $ContextOverridesOut, TInput> = (
-  opts: MiddlewareFunctionParams<TContext, TContextOverridesIn, TInput> & {
-    next: {
-      (): Promise<MiddlewareResult<TContext>>
-      <TNextContext>(opts: { ctx?: TNextContext }): Promise<MiddlewareResult<TNextContext>>
-    }
-  }
-) => Promise<MiddlewareResult<$ContextOverridesOut>>
-type Middleware<TContext, TContextOverridesIn, $ContextOverridesOut, TInput> = {
-  type: 'middleware'
-  fn: MiddlewareFunction<TContext, TContextOverridesIn, $ContextOverridesOut, TInput>
+type NextFunction = {
+  <TNextContext extends object = object>(opts?: { ctx?: TNextContext }): Promise<
+    MiddlewareResult<TNextContext>
+  >
 }
 
-export type MiddlewareResolverFunction<
-  TContext,
-  TContextOverridesIn,
-  $ContextOverridesOut,
-  TInput,
-> = (
-  opts: MiddlewareFunctionParams<TContext, TContextOverridesIn, TInput> & {
+export type MiddlewareFunction<TContext, TContextOverridesOut, TInput> = (
+  opts: MiddlewareFunctionParams<TContext, TInput> & {
+    next: NextFunction
+  }
+) => MaybePromise<MiddlewareResult<TContextOverridesOut>>
+
+type Middleware<TContext, TContextOverridesOut, TInput> = {
+  type: 'middleware'
+  fn: MiddlewareFunction<TContext, TContextOverridesOut, TInput>
+}
+
+export type MiddlewareResolverFunction<TContext, TContextOverridesOut, TInput> = (
+  opts: MiddlewareFunctionParams<TContext, TInput> & {
     emitEventTo: AnyEmitEventToFunction
   }
-) => Promise<MiddlewareResult<$ContextOverridesOut>>
-type MiddlewareResolver<TContext, TContextOverridesIn, $ContextOverridesOut, TInput> = {
+) => MaybePromise<MiddlewareResult<TContextOverridesOut>>
+
+type MiddlewareResolver<TContext, TContextOverridesOut, TInput> = {
   type: 'resolver'
-  fn: MiddlewareResolverFunction<TContext, TContextOverridesIn, $ContextOverridesOut, TInput>
+  fn: MiddlewareResolverFunction<TContext, TContextOverridesOut, TInput>
 }
 
-export type MiddlewareFn<TContext, TContextOverridesIn, $ContextOverridesOut, TInput> =
-  | Middleware<TContext, TContextOverridesIn, $ContextOverridesOut, TInput>
-  | MiddlewareResolver<TContext, TContextOverridesIn, $ContextOverridesOut, TInput>
+export type MiddlewareFn<TContext, TContextOverridesOut, TInput> =
+  | Middleware<TContext, TContextOverridesOut, TInput>
+  | MiddlewareResolver<TContext, TContextOverridesOut, TInput>
 
-export type AnyMiddlewareFn = MiddlewareFn<any, any, any, any>
+export type AnyMiddlewareFn = MiddlewareFn<any, any, any>
+export type AnyMiddlewareFunction = MiddlewareFunction<any, any, any>
+export type AnyMiddlewareResolver = MiddlewareResolver<any, any, any>
 
-export type AnyMiddlewareFunction = MiddlewareFunction<any, any, any, any>
-export type AnyMiddlewareResolver = MiddlewareResolver<any, any, any, any>
+export interface MiddlewareBuilder<TContext, TContextOverrides, TInput> {
+  pipe<TRequiredContext, TNextContextOverrides extends object>(
+    fn: Simplify<Overwrite<TContext, TContextOverrides>> extends TRequiredContext
+      ? | MiddlewareFunction<TRequiredContext, TNextContextOverrides, any>
+        | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
+      : never
+  ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, TNextContextOverrides>, TInput>
+  _middlewares: AnyMiddlewareFunction[]
+}
+
 export type AnyMiddlewareBuilder = MiddlewareBuilder<any, any, any>
 
 export const isMiddlewareResolver = (
@@ -76,23 +78,25 @@ export const isMiddlewareResolver = (
 }
 
 export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
-  function createMiddlewareInner(middlewares: AnyMiddlewareFunction[]): AnyMiddlewareBuilder {
+  function createMiddlewareInner<TBaseContext, TContextOverrides, TInput>(
+    middlewares: AnyMiddlewareFunction[]
+  ): MiddlewareBuilder<TBaseContext, TContextOverrides, TInput> {
     return {
       _middlewares: middlewares,
       pipe(middlewareBuilderOrFn) {
-        const pipedMiddleware =
-          '_middlewares' in middlewareBuilderOrFn
+        const pipedMiddlewares =
+          typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
             ? middlewareBuilderOrFn._middlewares
             : [middlewareBuilderOrFn]
 
-        return createMiddlewareInner([...middlewares, ...pipedMiddleware])
+        return createMiddlewareInner([...middlewares, ...pipedMiddlewares])
       },
     }
   }
 
-  function createMiddleware<$ContextOverrides>(
-    fn: MiddlewareFunction<TContext, object, $ContextOverrides, TInputOut>
-  ): MiddlewareBuilder<TContext, $ContextOverrides, TInputOut> {
+  function createMiddleware<TContextOverrides extends object>(
+    fn: MiddlewareFunction<TContext, TContextOverrides, TInputOut>
+  ): MiddlewareBuilder<TContext, TContextOverrides, TInputOut> {
     return createMiddlewareInner([fn])
   }
 
