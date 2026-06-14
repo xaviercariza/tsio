@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import type { UserProfile } from '../../types'
 import { Chat } from '../Chat'
+import { useChat } from '../ChatProvider/ChatProvider'
 import { Layout } from '../Layout'
 import { SideBar } from '../SideBar'
 import { useTsIo } from '../TsIoProvider'
-import { useChat } from '../ChatProvider/ChatProvider'
 
 type Proops = { user: UserProfile; onLogOut: () => void }
 
@@ -14,7 +14,7 @@ export function MainScreen({ user, onLogOut }: Proops) {
 
   useEffect(() => {
     if (tsIo) {
-      const listener = tsIo.listeners.chat.onMessageReceived(newChat => {
+      const event = tsIo.events.chat.onMessageReceived(newChat => {
         chat.dispatch({
           type: 'UPDATE_CHAT',
           payload: { chat: newChat },
@@ -22,7 +22,7 @@ export function MainScreen({ user, onLogOut }: Proops) {
       })
 
       return () => {
-        listener.unsubscribe()
+        event.unsubscribe()
       }
     }
   }, [chat.dispatch, tsIo])
