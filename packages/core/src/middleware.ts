@@ -62,8 +62,7 @@ export type AnyMiddlewareResolver = MiddlewareResolver<any, any, any>
 export interface MiddlewareBuilder<TContext, TContextOverrides, TInput> {
   pipe<TRequiredContext, TNextContextOverrides extends object>(
     fn: Simplify<Overwrite<TContext, TContextOverrides>> extends TRequiredContext
-      ? | MiddlewareFunction<TRequiredContext, TNextContextOverrides, any>
-        | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
+      ? MiddlewareFunction<TRequiredContext, TNextContextOverrides, any> | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
       : never
   ): MiddlewareBuilder<TContext, Overwrite<TContextOverrides, TNextContextOverrides>, TInput>
   _middlewares: AnyMiddlewareFunction[]
@@ -83,13 +82,19 @@ export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
   ): MiddlewareBuilder<TBaseContext, TContextOverrides, TInput> {
     return {
       _middlewares: middlewares,
-      pipe(middlewareBuilderOrFn) {
+      pipe<TRequiredContext, TNextContextOverrides extends object>(middlewareBuilderOrFn: Simplify<Overwrite<TBaseContext, TContextOverrides>> extends TRequiredContext
+        ? MiddlewareFunction<TRequiredContext, TNextContextOverrides, any> | MiddlewareBuilder<TRequiredContext, TNextContextOverrides, any>
+        : never) {
         const pipedMiddlewares =
           typeof middlewareBuilderOrFn === 'object' && '_middlewares' in middlewareBuilderOrFn
             ? middlewareBuilderOrFn._middlewares
             : [middlewareBuilderOrFn]
 
-        return createMiddlewareInner([...middlewares, ...pipedMiddlewares])
+        return createMiddlewareInner<
+          TBaseContext,
+          Overwrite<TContextOverrides, TNextContextOverrides>,
+          TInput
+        >([...middlewares, ...pipedMiddlewares])
       },
     }
   }
@@ -97,7 +102,7 @@ export function createMiddlewareFactory<TContext, TInputOut = unknown>() {
   function createMiddleware<TContextOverrides extends object>(
     fn: MiddlewareFunction<TContext, TContextOverrides, TInputOut>
   ): MiddlewareBuilder<TContext, TContextOverrides, TInputOut> {
-    return createMiddlewareInner([fn])
+    return createMiddlewareInner<TContext, TContextOverrides, TInputOut>([fn])
   }
 
   return createMiddleware
