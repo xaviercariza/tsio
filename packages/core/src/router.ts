@@ -16,7 +16,7 @@ import {
   type MiddlewareResult,
   isMiddlewareResolver,
 } from './middleware'
-import type { MaybePromise, Overwrite } from './types'
+import type { Overwrite } from './types'
 
 type AnyRouter = Router<any, any, any>
 type Router<
@@ -59,8 +59,7 @@ export interface ActionBuilder<
   _def: ActionRuntimeDefinition
   use<TRequiredContext, TContextOut extends object>(
     fn: TCurrentContext extends TRequiredContext
-      ? | MiddlewareFunction<TRequiredContext, TContextOut, any>
-        | MiddlewareBuilder<TRequiredContext, TContextOut, any>
+      ? MiddlewareFunction<TRequiredContext, TContextOut, any> | MiddlewareBuilder<TRequiredContext, TContextOut, any>
       : never
   ): ActionBuilder<
     RootContract,
@@ -155,7 +154,7 @@ function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolve
     ],
   }
 
-  const action = async opts => {
+  const action = async (opts: any) => {
     async function callRecursive(
       callOpts: {
         ctx: any
@@ -186,7 +185,7 @@ function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolve
 
         return await middleware.fn({
           ...params,
-          next(nextOpts) {
+          next(nextOpts?: { ctx?: any }) {
             return callRecursive({
               index: callOpts.index + 1,
               ctx:
@@ -228,7 +227,10 @@ const createContractActions = <
 ): RouterActionsBuilder<TContract, TContext, RootContract> => {
   return Object.entries(contract).reduce((acc, [key, subRouter]) => {
     if (isContractRouter(subRouter)) {
-      return { ...acc, [key]: createContractActions(subRouter) }
+      return {
+        ...acc,
+        [key]: createContractActions<ContractRouterType, TContext, RootContract>(subRouter),
+      }
     }
 
     if (isContractListener(subRouter)) {
@@ -259,7 +261,7 @@ const getRouterCreator = <
   return {
     create: routerOrFactory => {
       if (typeof routerOrFactory === 'function') {
-        return routerOrFactory(createContractActions(contract))
+        return routerOrFactory(createContractActions<TContract, TContext, RootContract>(contract))
       }
 
       return routerOrFactory
@@ -278,7 +280,7 @@ function extractRouters<
     for (const key in node) {
       const subRouter = node[key]
       if (subRouter && typeof subRouter === 'object' && isContractRouter(subRouter)) {
-        routers[key] = getRouterCreator(subRouter)
+        routers[key] = getRouterCreator<ContractRouterType, TContext, RootContract>(subRouter)
         traverse(subRouter)
       }
     }
