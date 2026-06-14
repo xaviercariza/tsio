@@ -139,6 +139,7 @@ function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolve
         type: 'resolver',
         fn: async function resolveMiddleware(opts) {
           const data = await resolver({
+            path: opts.path,
             ctx: opts.ctx,
             input: opts.input,
             emitEventTo: opts.emitEventTo,
