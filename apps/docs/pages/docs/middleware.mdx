@@ -1,0 +1,117 @@
+# Middleware
+
+Middleware is one of the most important parts of `tsio`.
+
+It runs before an action handler and can refine the context type for the next middleware and final handler.
+
+## Auth example
+
+Start with a nullable user in the base context:
+
+```ts
+type Context = {
+  user: User | null
+  socketId: string
+}
+```
+
+Create a middleware that rejects unauthenticated calls and forwards a non-null user:
+
+```ts
+const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    return { ok: false, error: new Error('Unauthorized') }
+  }
+
+  return next({
+    ctx: {
+      user: ctx.user,
+    },
+  })
+})
+```
+
+Because TypeScript narrows `ctx.user` after the guard, the context patch is inferred as:
+
+```ts
+{ user: User }
+```
+
+Now protected handlers receive a non-null user:
+
+```ts
+a.chat.sendMessage.use(requireUser).handler(({ ctx }) => {
+  ctx.user.id // User, not User | null
+})
+```
+
+## Piping middleware
+
+Middleware builders can be piped together.
+
+```ts
+const requireAdmin = requireUser.pipe(async ({ ctx, next }) => {
+  if (ctx.user.role !== 'admin') {
+    return { ok: false, error: new Error('Forbidden') }
+  }
+
+  return next({
+    ctx: {
+      isAdmin: true as const,
+    },
+  })
+})
+```
+
+A handler using `requireAdmin` receives all accumulated refinements:
+
+```ts
+a.admin.deleteRoom.use(requireAdmin).handler(({ ctx }) => {
+  ctx.user.role // 'admin' | 'member'
+  ctx.isAdmin  // true
+})
+```
+
+## Middleware result shape
+
+Middleware returns either an error result:
+
+```ts
+return {
+  ok: false,
+  error: new Error('Unauthorized'),
+}
+```
+
+or calls `next()`:
+
+```ts
+return next()
+```
+
+or calls `next()` with a context patch:
+
+```ts
+return next({
+  ctx: {
+    requestId: crypto.randomUUID(),
+  },
+})
+```
+
+## Best practices
+
+Use middleware for:
+
+- authentication
+- authorization
+- request IDs
+- logger instances
+- rate limiting
+- tenant or organization lookup
+
+Avoid middleware for business logic. Business logic belongs in handlers or services called by handlers.
+
+Keep context patches small. A middleware should refine or add only the fields it owns.
+
+Prefer explicit failures for expected auth/domain errors. Throw only for unexpected errors.
