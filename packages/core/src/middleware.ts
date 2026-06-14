@@ -1,4 +1,4 @@
-import type { AnyEmitEventToFunction } from './contract'
+import type { AnyEmitFunction } from './contract'
 import type { MaybePromise, Overwrite, Simplify } from './types'
 
 interface MiddlewareOKResult<TContextOverride = object> {
@@ -74,7 +74,7 @@ type Middleware<TContext, TContextOverridesOut, TInput> = {
 
 export type MiddlewareResolverFunction<TContext, TContextOverridesOut, TInput> = (
   opts: MiddlewareFunctionParams<TContext, TInput> & {
-    emitEventTo: AnyEmitEventToFunction
+    emit: AnyEmitFunction
   }
 ) => MaybePromise<MiddlewareResult<TContextOverridesOut>>
 
