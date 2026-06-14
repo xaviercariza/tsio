@@ -1,0 +1,96 @@
+# Transports
+
+`@tsio/core` is transport-agnostic. It defines the contract, router, middleware, client generation, and adapter interfaces.
+
+Concrete packages connect that core to a runtime transport.
+
+## Socket.IO
+
+Install:
+
+```bash
+pnpm add @tsio/socketio socket.io socket.io-client
+```
+
+Server adapter:
+
+```ts
+import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+
+io.on('connection', socket => {
+  const adapter = createSocketIoServerAdapter(socket)
+
+  tsIo.attachRouterToSocket({
+    router,
+    adapter,
+    createContext: () => ({ socket }),
+  })
+})
+```
+
+Client adapter:
+
+```ts
+import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { io } from 'socket.io-client'
+
+const socket = io('http://localhost:3000')
+const client = initNewClient(createSocketIoClientAdapter(socket), contract)
+```
+
+Use Socket.IO when you want rooms, reconnection behavior, fallbacks, and the broader Socket.IO ecosystem.
+
+## ws
+
+Install:
+
+```bash
+pnpm add @tsio/ws ws
+```
+
+Server adapter:
+
+```ts
+import { createWsServerProxy } from '@tsio/ws/server'
+
+const adapter = createWsServerProxy(wss, socket)
+tsIo.attachRouterToSocket({ router, adapter, createContext })
+```
+
+Client adapter:
+
+```ts
+import { createWsClientProxy } from '@tsio/ws/client'
+
+const socket = new WebSocket('ws://localhost:3000')
+const client = initNewClient(createWsClientProxy(socket), contract)
+```
+
+Use `ws` when you want a smaller, lower-level WebSocket transport.
+
+## Choosing a transport
+
+Choose Socket.IO when:
+
+- you want automatic reconnection
+- you already use Socket.IO rooms or middleware
+- you want simpler browser/mobile behavior
+- you need to support more real-world networking edge cases
+
+Choose `ws` when:
+
+- you control both ends of the connection
+- you want fewer abstractions
+- you need a lightweight Node WebSocket implementation
+- you are building custom protocol behavior
+
+## Future transports
+
+The contract-first model can support more than sockets. Future adapters could include:
+
+- HTTP actions over `fetch`
+- Supabase Realtime listeners
+- Redis or NATS backplanes for horizontally scaled socket servers
+- server-sent events for one-way updates
+
+Those are not part of the stable adapter surface today. The current production-ready transports are Socket.IO and `ws`.
