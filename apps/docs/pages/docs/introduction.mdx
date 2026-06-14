@@ -1,0 +1,77 @@
+# Introduction
+
+`tsio` is a contract-first TypeScript library for defining type-safe realtime protocols.
+
+It lets you describe the messages your application understands once, then reuse that contract to type:
+
+- server action handlers
+- generated client actions
+- generated client listeners
+- server-to-client event emission
+- middleware context refinement
+- transport adapters such as Socket.IO and `ws`
+
+## The problem
+
+Realtime code often starts with strings and `any` payloads:
+
+```ts
+socket.emit('send-message', { text })
+socket.on('message-received', payload => {
+  // What is payload?
+})
+```
+
+That works until event names drift, payloads change, or authentication context is nullable in every handler.
+
+`tsio` replaces that with a shared contract:
+
+```ts
+const contract = defineContract({
+  chat: {
+    sendMessage: {
+      type: 'action',
+      input: z.object({ text: z.string() }),
+      response: MessageSchema,
+    },
+    onMessage: {
+      type: 'listener',
+      data: MessageSchema,
+    },
+  },
+})
+```
+
+From that contract, the server and client both receive inferred types.
+
+## How it differs from tRPC
+
+`tRPC` is router-first: the server implementation is the source of truth and the client imports the router type.
+
+`tsio` is contract-first: the protocol is declared independently of the server implementation. That is useful for bidirectional systems because the protocol includes both directions:
+
+- actions: client to server
+- listeners: server to client
+
+This makes `tsio` a better fit for socket-style protocols than for plain CRUD APIs.
+
+## When to use it
+
+Use `tsio` when your app needs typed live communication:
+
+- chat and presence
+- multiplayer rooms
+- collaborative interfaces
+- dashboards with live updates
+- admin consoles with realtime feedback
+- internal tools using Socket.IO or `ws`
+
+For plain request/response HTTP APIs, use `fetch`, tRPC, or a future HTTP adapter rather than forcing sockets into the architecture.
+
+## Current status
+
+`tsio` is pre-1.0. The core API is being refined, and the current production-ready surface is focused on:
+
+- `@tsio/core`
+- `@tsio/socketio`
+- `@tsio/ws`
