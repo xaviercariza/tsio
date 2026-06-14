@@ -1,4 +1,4 @@
-import type { ContractListeners, ContractRouterType, TsIoClientAdapter } from '@tsio/core'
+import type { ContractPaths, ContractRouterType, TsIoClientAdapter } from '@tsio/core'
 import type WebSocket from 'ws'
 
 function generateRequestId(): string {
@@ -9,7 +9,7 @@ function createWsClientProxy<Contract extends ContractRouterType>(
   socket: WebSocket
 ): TsIoClientAdapter<Contract> {
   const requestCallbacks: Map<string, (data: any) => void> = new Map()
-  const eventsCallbacks: Map<keyof ContractListeners<Contract>, (data: any) => void> = new Map()
+  const eventsCallbacks: Map<ContractPaths<Contract, 'listener'>, (data: any) => void> = new Map()
 
   socket.addEventListener('message', event => {
     const data = JSON.parse(event.data.toString())
