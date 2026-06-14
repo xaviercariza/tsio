@@ -9,7 +9,7 @@ export type TsIoWebSocketServer = Omit<WebSocketServer, 'clients'> & {
   clients: Set<TsIoWebSocket>
 }
 
-function createWsServerProxy<Action extends ContractAction>(
+function ws<Action extends ContractAction>(
   wsServer: TsIoWebSocketServer,
   socket: TsIoWebSocket
 ): TsIoServerAdapter<Action> {
@@ -44,4 +44,4 @@ function createWsServerProxy<Action extends ContractAction>(
   }
 }
 
-export { createWsServerProxy }
+export { ws }
