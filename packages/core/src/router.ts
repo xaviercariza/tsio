@@ -1,12 +1,12 @@
 import type { Action, ActionResolver, ActionRuntimeDefinition, AnyAction } from './action'
 import {
   type ContractAction,
-  type ContractListener,
+  type ContractEvent,
   type ContractRouterType,
   type InferActionInput,
   type InferActionOutput,
   isActionWithAck,
-  isContractListener,
+  isContractEvent,
   isContractRouter,
 } from './contract'
 import {
@@ -27,7 +27,7 @@ type Router<
   TContext,
   RootContract extends ContractRouterType,
 > = {
-  [K in keyof Contract as Contract[K] extends ContractListener ? never : K]: Contract[K] extends ContractAction
+  [K in keyof Contract as Contract[K] extends ContractEvent ? never : K]: Contract[K] extends ContractAction
     ? Action<RootContract, TContext, InferActionInput<Contract[K]>, InferActionOutput<Contract[K]>>
     : Contract[K] extends ContractRouterType
       ? Router<Contract[K], TContext, RootContract>
@@ -39,7 +39,7 @@ type RouterActionsBuilder<
   TContext,
   RootContract extends ContractRouterType,
 > = {
-  [K in keyof Contract as Contract[K] extends ContractListener ? never : K]: Contract[K] extends ContractAction
+  [K in keyof Contract as Contract[K] extends ContractEvent ? never : K]: Contract[K] extends ContractAction
     ? ActionBuilder<
         RootContract,
         TContext,
@@ -80,7 +80,7 @@ export interface ActionBuilder<
     TInput,
     TOutput
   >
-  handler(
+  handle(
     resolver: ActionResolver<RootContract, TCurrentContext, TInput, TOutput>
   ): Action<RootContract, TInitialContext, TInput, TOutput>
 }
@@ -139,7 +139,7 @@ function createActionBuilder<
         ],
       })
     },
-    handler(resolver: ActionResolver<any, any, any, any>) {
+    handle(resolver: ActionResolver<any, any, any, any>) {
       return createResolver(def, resolver)
     },
   }
@@ -159,7 +159,7 @@ function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolve
             path: opts.path,
             ctx: opts.ctx,
             input: opts.input,
-            emitEventTo: opts.emitEventTo,
+            emit: opts.emit,
           })
 
           return {
@@ -197,7 +197,7 @@ function createResolver(_defIn: ActionRuntimeDefinition, resolver: ActionResolve
         if (isMiddlewareResolver(middleware)) {
           return await middleware.fn({
             ...params,
-            emitEventTo: opts.emitTo,
+            emit: opts.emit,
           })
         }
 
@@ -251,7 +251,7 @@ const createContractActions = <
       }
     }
 
-    if (isContractListener(subRouter)) {
+    if (isContractEvent(subRouter)) {
       return acc
     }
 
