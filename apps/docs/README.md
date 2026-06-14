@@ -1,30 +1,34 @@
-## Getting Started
+# tsio docs
 
-First, run the development server:
+This app contains the public landing page and documentation for `tsio`.
+
+It is built with Next.js and Nextra.
+
+## Development
+
+From the repository root:
 
 ```bash
-yarn dev
+pnpm install
+pnpm --filter @tsio/docs dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The docs app runs on port `3001`.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## Production build
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+```bash
+pnpm --filter @tsio/docs build
+```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## Content structure
 
-## Learn More
+```txt
+pages/index.mdx        # landing page
+pages/docs             # product documentation
+pages/guides           # practical guides
+pages/reference        # API and package reference
+components             # landing page and shared docs components
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn/foundations/about-nextjs) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_source=github.com&utm_medium=referral&utm_campaign=turborepo-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+The documentation is intentionally written for a pre-1.0 library: stable Socket.IO and `ws` usage is documented, while future adapter ideas are clearly marked as future directions.
