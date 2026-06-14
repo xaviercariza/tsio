@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
+    "build": "next build",
     "start": "next start",
-    "prettier": "prettier --write \"**/*.{ts,tsx}\" --config ../../prettier.config.cjs",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md,mdx}\" --config ../../prettier.config.cjs",
     "types-check": "tsc --noemit"
   },
   "dependencies": {

@@ -1,0 +1,90 @@
+# Transports
+
+`@tsio/core` defines the contract, router, middleware, client generation, and adapter interfaces. Transport packages connect that core to a concrete runtime.
+
+The supported transports documented today are Socket.IO and `ws`.
+
+## Socket.IO
+
+Install:
+
+```bash
+pnpm add @tsio/socketio socket.io socket.io-client
+```
+
+Server adapter:
+
+```ts
+import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+
+io.on('connection', socket => {
+  const adapter = createSocketIoServerAdapter(socket)
+
+  tsIo.attachRouterToSocket({
+    router,
+    adapter,
+    createContext: () => ({ socket }),
+  })
+})
+```
+
+Client adapter:
+
+```ts
+import { createSocketIoClientAdapter } from '@tsio/socketio/client'
+import { io } from 'socket.io-client'
+
+const socket = io('http://localhost:3000')
+const client = initNewClient(createSocketIoClientAdapter(socket), contract)
+```
+
+Choose Socket.IO when you want:
+
+- automatic reconnection
+- rooms and namespaces
+- middleware and connection lifecycle hooks
+- a higher-level browser and mobile socket experience
+
+## ws
+
+Install:
+
+```bash
+pnpm add @tsio/ws ws
+```
+
+Server adapter:
+
+```ts
+import { createWsServerProxy } from '@tsio/ws/server'
+
+const adapter = createWsServerProxy(wss, socket)
+tsIo.attachRouterToSocket({ router, adapter, createContext })
+```
+
+Client adapter:
+
+```ts
+import { createWsClientProxy } from '@tsio/ws/client'
+
+const socket = new WebSocket('ws://localhost:3000')
+const client = initNewClient(createWsClientProxy(socket), contract)
+```
+
+Choose `ws` when you want:
+
+- a smaller transport layer
+- direct control over WebSocket behavior
+- fewer framework-level abstractions
+- a custom protocol on top of WebSocket
+
+## Adapter behavior
+
+Both adapters implement the same core concepts:
+
+- client actions are emitted to the server
+- request-response actions resolve with a typed response
+- server handlers can emit listener events to a connected client
+- client listeners receive typed payloads
+
+Transport-specific behavior such as connection setup, reconnection, rooms, and lifecycle management remains the responsibility of the transport package you choose.

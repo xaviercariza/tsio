@@ -1,0 +1,146 @@
+# Testing Your App
+
+This page shows how to test your own `tsio` usage.
+
+The goal is not to test `tsio` internals. Your tests should prove that your contract, handlers, middleware, and client wiring behave correctly in your application.
+
+## What to test
+
+Most apps should cover three layers:
+
+1. handler behavior without a real socket
+2. middleware behavior and context refinement
+3. one or two transport integration flows
+
+You usually do not need to repeat every handler test through Socket.IO or `ws`. Test most business behavior close to the router, then keep a small number of transport tests to prove the adapter wiring works.
+
+## Test handlers without a socket
+
+For action handlers, create the router and call the registered adapter handler directly with a small test adapter.
+
+```ts
+import { type TsIoServerAdapter } from '@tsio/core'
+import { vi, expect, it } from 'vitest'
+
+function createTestAdapter() {
+  const handlers = new Map<string, (input: unknown) => unknown>()
+
+  const adapter: TsIoServerAdapter<any> = {
+    emitTo: vi.fn(),
+    on: vi.fn((event, handler) => {
+      handlers.set(event, handler as (input: unknown) => unknown)
+    }),
+  }
+
+  return { adapter, handlers }
+}
+```
+
+Then attach your router and call the action path:
+
+```ts
+it('creates a post', async () => {
+  const { adapter, handlers } = createTestAdapter()
+
+  tsIo.attachRouterToSocket({
+    router,
+    adapter,
+    createContext: () => ({ userId: 'user-1' }),
+  })
+
+  const result = await handlers.get('posts.create')?.({ title: 'Hello' })
+
+  expect(result).toStrictEqual({
+    success: true,
+    data: { id: 'post-1', title: 'Hello' },
+  })
+})
+```
+
+This style is fast, deterministic, and does not require a real network connection.
+
+## Test emitted events
+
+Use the same test adapter to assert that handlers emit the right listener events.
+
+```ts
+expect(adapter.emitTo).toHaveBeenCalledWith(
+  'posts.onCreated',
+  'socket-1',
+  { id: 'post-1', title: 'Hello' }
+)
+```
+
+This verifies the action handler calls `emitEventTo` with the expected listener path, target id, and payload.
+
+## Test middleware behavior
+
+Middleware should be tested in two ways:
+
+- unauthenticated or unauthorized calls fail
+- authenticated calls reach the handler with the expected context
+
+```ts
+it('rejects unauthenticated users', async () => {
+  const { adapter, handlers } = createTestAdapter()
+
+  tsIo.attachRouterToSocket({
+    router,
+    adapter,
+    createContext: () => ({ user: null }),
+  })
+
+  await expect(handlers.get('account.update')?.({ name: 'Xavier' })).rejects.toThrow('Unauthorized')
+})
+```
+
+For successful calls, assert the handler receives the refined context you expect.
+
+## Test validation
+
+If you enable `options.validate`, add tests for invalid input and invalid successful responses.
+
+```ts
+await expect(handlers.get('posts.create')?.({ title: 123 })).rejects.toThrow()
+```
+
+Validation tests are most useful at the core router level. You do not need to repeat the same invalid payload test for every transport.
+
+## Add a small transport integration test
+
+After your handlers are covered with a test adapter, add one or two tests using the real transport adapter.
+
+Good integration tests include:
+
+- a client can call a request-response action and receive the response
+- a server handler can emit a listener event to a connected client
+- unsubscribe stops future listener callbacks
+
+Keep these tests focused on transport wiring, not every business branch.
+
+## Add type tests for public app contracts
+
+If your app exports a shared contract package, you can add `.test-d.ts` files to protect the developer experience.
+
+```ts
+import { expectTypeOf } from 'vitest'
+
+expectTypeOf(client.actions.chat.sendMessage)
+  .parameter(0)
+  .toEqualTypeOf<{ text: string }>()
+
+// @ts-expect-error wrong input shape
+client.actions.chat.sendMessage({ wrong: 'field' })
+```
+
+Type tests are especially useful when contracts are shared across multiple apps or packages.
+
+## Recommended balance
+
+A healthy app test suite usually has:
+
+- many fast handler and middleware tests with a test adapter
+- a few type tests for shared contracts
+- a small number of real Socket.IO or `ws` integration tests
+
+Avoid making every test a socket integration test. It will be slower, flakier, and harder to debug than testing most behavior at the router boundary.

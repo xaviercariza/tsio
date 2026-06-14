@@ -1,0 +1,5 @@
+{
+  "core": "Core API",
+  "adapters": "Adapter Interfaces",
+  "packages": "Packages"
+}

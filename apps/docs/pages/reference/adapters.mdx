@@ -1,0 +1,63 @@
+# Adapter Interfaces
+
+Adapters connect `@tsio/core` to concrete transports.
+
+## Client adapter
+
+A client adapter sends actions, registers listener callbacks, and unsubscribes from listener events.
+
+```ts
+type TsIoClientAdapter<Contract> = {
+  emit(action, payload, callback?): void
+  on(listener, callback): void
+  unsubscribe(listener): void
+}
+```
+
+You usually do not implement this directly unless you are building a new transport package.
+
+## Server adapter
+
+A server adapter registers action handlers and emits listener events to a target client.
+
+```ts
+type TsIoServerAdapter<Action> = {
+  emitTo(event, socketId, data): void
+  on(event, handler): void
+}
+```
+
+`attachRouterToSocket` uses `on` to register each action path.
+
+Handlers use `emitEventTo`, which delegates to `emitTo`.
+
+## Message semantics
+
+Adapters are responsible for transport-specific behavior:
+
+- message serialization
+- request IDs
+- acknowledgement callbacks
+- timeouts
+- target socket lookup
+- unsubscribe behavior
+- connection lifecycle
+
+The core package intentionally does not know about Socket.IO or `ws` internals.
+
+## Implementing a new adapter
+
+A new adapter should preserve these invariants:
+
+1. Action paths must be delivered to the matching server handler.
+2. Request-response actions must resolve with the handler response.
+3. Listener event payloads must be delivered to registered listener callbacks.
+4. `unsubscribe` must stop future callbacks for that listener.
+5. Targeted emits must only deliver to the requested target when the transport supports targeting.
+
+## Current adapters
+
+- `@tsio/socketio/client`
+- `@tsio/socketio/server`
+- `@tsio/ws/client`
+- `@tsio/ws/server`

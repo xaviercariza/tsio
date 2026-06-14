@@ -1,14 +1,20 @@
 {
-  "index": "Introduction",
-  "core": "@tsio/core",
-  "about": {
-    "title": "About",
-    "type": "page"
+  "index": {
+    "title": "Home",
+    "theme": {
+      "layout": "full",
+      "sidebar": false,
+      "toc": false,
+      "pagination": false
+    }
   },
-  "contact": {
-    "title": "Contact ↗",
+  "docs": "Documentation",
+  "guides": "Guides",
+  "reference": "Reference",
+  "github": {
+    "title": "GitHub ↗",
     "type": "page",
-    "href": "",
+    "href": "https://github.com/xaviercariza/tsio",
     "newWindow": true
   }
 }

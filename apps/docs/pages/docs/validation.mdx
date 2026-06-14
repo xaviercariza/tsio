@@ -1,0 +1,90 @@
+# Runtime Validation
+
+`tsio` uses Zod schemas for type inference. Runtime validation is opt-in per action.
+
+## Enable validation
+
+Add `options.validate` to an action:
+
+```ts
+const contract = defineContract({
+  posts: {
+    create: {
+      type: 'action',
+      input: z.object({ title: z.string() }),
+      response: z.object({ id: z.string(), title: z.string() }),
+      options: { validate: true },
+    },
+  },
+})
+```
+
+When validation is enabled, `tsio` parses:
+
+- action input before the handler runs
+- successful response payloads before the response is sent back
+
+## Input validation
+
+If input validation fails, the handler is not called.
+
+```ts
+await client.actions.posts.create({ title: 123 })
+```
+
+The action dispatcher rejects before entering the resolver.
+
+## Response validation
+
+Only successful response payloads are parsed.
+
+```ts
+return {
+  success: true,
+  data: { id: 123, title: input.title },
+}
+```
+
+If the response schema expects `id: string`, this will fail when validation is enabled.
+
+Error responses are not parsed against the response data schema:
+
+```ts
+return {
+  success: false,
+  error: 'Post could not be created',
+}
+```
+
+## When to enable validation
+
+Use runtime validation at trust boundaries:
+
+- public clients
+- untrusted socket connections
+- mobile clients that may be outdated
+- actions that mutate important data
+- actions exposed across service boundaries
+
+You may skip validation for trusted internal flows if performance or payload volume matters.
+
+## Best practices
+
+Keep validation schemas close to the contract.
+
+Use domain schemas for shared payloads:
+
+```ts
+const PostSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+})
+```
+
+Then compose action-specific input schemas:
+
+```ts
+input: PostSchema.pick({ title: true })
+```
+
+Do not use validation to replace authorization. Validation proves payload shape, not whether a user can perform the action.

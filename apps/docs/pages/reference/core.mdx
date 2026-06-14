@@ -1,0 +1,137 @@
+# Core API Reference
+
+This page summarizes the public API exported from `@tsio/core`.
+
+## `defineContract`
+
+Defines a typed protocol contract.
+
+```ts
+const contract = defineContract({
+  chat: {
+    sendMessage: {
+      type: 'action',
+      input: z.object({ text: z.string() }),
+      response: MessageSchema,
+    },
+  },
+})
+```
+
+The function returns the same object while preserving literal and schema types.
+
+## `initTsIo`
+
+Creates a typed builder for a contract.
+
+```ts
+const tsIo = initTsIo.context<Context>().create(contract)
+```
+
+Returns:
+
+```ts
+{
+  router,
+  middleware,
+  attachRouterToSocket,
+}
+```
+
+## `router.create`
+
+Creates a server router from action builders.
+
+```ts
+const router = tsIo.router.create(a => ({
+  chat: {
+    sendMessage: a.chat.sendMessage.handler(handler),
+  },
+}))
+```
+
+Nested router factories are also available:
+
+```ts
+const chatRouter = tsIo.router.chat.create(a => ({
+  sendMessage: a.sendMessage.handler(handler),
+}))
+```
+
+## `middleware`
+
+Creates middleware that can refine the handler context.
+
+```ts
+const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+  if (!ctx.user) return { ok: false, error: new Error('Unauthorized') }
+  return next({ ctx: { user: ctx.user } })
+})
+```
+
+Middleware can be used directly or piped:
+
+```ts
+a.secureAction.use(requireUser).handler(handler)
+
+const requireAdmin = requireUser.pipe(adminMiddleware)
+```
+
+## `attachRouterToSocket`
+
+Attaches a server router to a transport adapter.
+
+```ts
+tsIo.attachRouterToSocket({
+  router,
+  adapter,
+  createContext,
+})
+```
+
+## `initNewClient`
+
+Creates a typed client from a client adapter and contract.
+
+```ts
+const client = initNewClient(adapter, contract)
+```
+
+The client exposes:
+
+```ts
+client.actions
+client.listeners
+```
+
+## `mergeContracts`
+
+Merges multiple contract objects.
+
+```ts
+const contract = mergeContracts(authContract, chatContract, presenceContract)
+```
+
+Use this when splitting a large protocol across files.
+
+## Types
+
+Important exported types:
+
+```ts
+TsIoClient
+TsIoClientAdapter
+TsIoServerAdapter
+TsIoServerEmitter
+ContractAction
+ContractActions
+ContractListeners
+ContractPaths
+ContractRouterType
+Router
+RouterCreator
+MiddlewareResult
+MiddlewareBuilder
+ActionCallOptions
+TResponse
+```
