@@ -24,10 +24,11 @@ pnpm --filter @tsio/docs build
 ## Content structure
 
 ```txt
-pages/index.mdx        # landing page
-pages/docs             # product documentation
-pages/guides           # practical guides
-pages/reference        # API and package reference
+app                    # Nextra 4 App Router shell and MDX catch-all route
+content/index.mdx      # landing page
+content/docs           # product documentation
+content/guides         # practical guides
+content/reference      # API and package reference
 components             # landing page and shared docs components
 ```
 

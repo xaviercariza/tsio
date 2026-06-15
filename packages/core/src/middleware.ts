@@ -23,11 +23,9 @@ export type MiddlewareFunctionParams<TContext, TInput> = {
 }
 export type AnyMiddlewareFunctionParams = MiddlewareFunctionParams<any, any>
 
-type NextFunction = {
-  <TNextContext extends object = object>(opts?: { ctx?: TNextContext }): Promise<
-    MiddlewareResult<TNextContext>
-  >
-}
+type NextFunction = <TNextContext extends object = object>(opts?: {
+  ctx?: TNextContext
+}) => Promise<MiddlewareResult<TNextContext>>
 
 export type MiddlewareFunction<TContext, TContextOverridesOut, TInput> = (
   opts: MiddlewareFunctionParams<TContext, TInput> & {

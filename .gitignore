@@ -8,6 +8,7 @@ node_modules
 # testing
 coverage
 tsconfig.vitest-temp.json
+*.tsbuildinfo
 
 # next.js
 .next/

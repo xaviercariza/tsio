@@ -66,12 +66,13 @@ async function createSockets<Contract extends ContractRouterType>(
   const io = new IoServer(httpServer)
   const port = (httpServer.address() as AddressInfo).port
 
+  const serverConnection = initializeTsIo(io)
   const socket1 = ioc(`http://localhost:${port}`, { forceNew: true })
-  const socket2 = ioc(`http://localhost:${port}`, { forceNew: true })
-
-  const server = await initializeTsIo(io)
+  const server = await serverConnection
 
   await waitForSocketIoClientToReceiveEvent(socket1, 'connect')
+
+  const socket2 = ioc(`http://localhost:${port}`, { forceNew: true })
   await waitForSocketIoClientToReceiveEvent(socket2, 'connect')
 
   const socket1ClientAdapter = socketioClient(socket1)

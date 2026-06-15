@@ -1,6 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@utility pattern-dots {
+  opacity: 0.06;
+  background-color: #ffffff;
+  background-image: radial-gradient(#6366f1 calc(20px * 0.1), #ffffff calc(20px * 0.1));
+  background-size: 15px 15px;
+}
 
 html {
   font-family: 'Poppins', system-ui, sans-serif;

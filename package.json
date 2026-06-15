@@ -1,7 +1,7 @@
 {
   "name": "root",
   "private": true,
-  "packageManager": "pnpm@7.15.0",
+  "packageManager": "pnpm@11.6.0",
   "repository": "https://github.com/xaviercariza/tsio",
   "scripts": {
     "build": "turbo run build",
@@ -10,18 +10,21 @@
     "prettier": "turbo run prettier --",
     "types-check": "turbo run types-check --",
     "lint": "biome lint ./",
-    "lint:fix": "biome lint --apply ./",
+    "lint:fix": "biome lint --write ./",
     "clean": "turbo clean && npm run clean:local",
     "clean:local": "find . -type d \\( -name '*node_modules*' -or -name '*turbo*' -or -name '*dist*' \\) -exec rm -rf {} \\; || true",
     "release": "pnpm run build && changeset publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.7.3",
-    "@changesets/cli": "^2.27.1",
-    "husky": "^9.0.10",
-    "lint-staged": "^15.2.2",
-    "prettier": "^3.2.5",
-    "turbo": "^1.12.4",
-    "typescript": "^5.4.2"
+    "@biomejs/biome": "2.5.0",
+    "@changesets/cli": "^2.31.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.4",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   }
 }

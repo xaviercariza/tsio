@@ -1,5 +1,4 @@
-import type { z } from 'zod'
-import type { InferSchema } from './types'
+import type { InferSchema, TsIoSchema } from './types'
 
 type ActionOptions = {
   validate?: boolean
@@ -9,7 +8,7 @@ type EventOptions = {
   validate?: boolean
 }
 
-type TBaseAction<TInput extends z.ZodTypeAny = z.ZodTypeAny> = {
+type TBaseAction<TInput extends TsIoSchema = TsIoSchema> = {
   type: 'action'
   input: TInput
   options?: ActionOptions
@@ -17,8 +16,8 @@ type TBaseAction<TInput extends z.ZodTypeAny = z.ZodTypeAny> = {
 }
 
 type TActionWithAck<
-  TInput extends z.ZodTypeAny = z.ZodTypeAny,
-  TOutput extends z.ZodTypeAny = z.ZodTypeAny,
+  TInput extends TsIoSchema = TsIoSchema,
+  TOutput extends TsIoSchema = TsIoSchema,
 > = {
   type: 'action'
   input: TInput
@@ -27,7 +26,7 @@ type TActionWithAck<
 }
 
 type IoAction = TBaseAction | TActionWithAck
-type IoEvent<TData extends z.ZodTypeAny = z.ZodTypeAny> = EventOptions & {
+type IoEvent<TData extends TsIoSchema = TsIoSchema> = EventOptions & {
   type: 'event'
   data: TData
 }
@@ -66,15 +65,15 @@ const isActionWithAck = (action: ContractAction): action is TActionWithAck => {
   return 'response' in action && action.response !== undefined
 }
 
-type InferActionInput<Action> = Action extends { input: infer Input extends z.ZodTypeAny }
+type InferActionInput<Action> = Action extends { input: infer Input extends TsIoSchema }
   ? InferSchema<Input>
   : never
 
-type InferActionOutput<Action> = Action extends { response: infer Output extends z.ZodTypeAny }
+type InferActionOutput<Action> = Action extends { response: infer Output extends TsIoSchema }
   ? InferSchema<Output>
   : void
 
-type InferEventData<Event> = Event extends { data: infer Data extends z.ZodTypeAny }
+type InferEventData<Event> = Event extends { data: infer Data extends TsIoSchema }
   ? InferSchema<Data>
   : never
 

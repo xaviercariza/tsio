@@ -1,11 +1,10 @@
-import type { z } from 'zod'
 import type { ContractRouterType, EmitFunction } from './contract'
 import type { AnyMiddlewareFn } from './middleware'
-import type { MaybePromise, TResponse } from './types'
+import type { MaybePromise, TsIoSchema, TResponse } from './types'
 
 type ActionRuntimeDefinition = {
-  input?: z.ZodTypeAny
-  response?: z.ZodTypeAny
+  input?: TsIoSchema
+  response?: TsIoSchema
   validateInput: boolean
   validateResponse: boolean
   middlewares: AnyMiddlewareFn[]

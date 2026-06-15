@@ -251,7 +251,7 @@ describe('ws', () => {
           }
         )
 
-        expect(action).resolves.toStrictEqual({
+        await expect(action).resolves.toStrictEqual({
           success: true,
           data: { ...actionPayload, id: 'post-1' },
         })
@@ -287,12 +287,10 @@ describe('ws', () => {
         const action =
           setup.client.socket1.client.actions.actionsRouter.requestResponseError(actionPayload)
 
-        await vi.waitFor(() =>
-          expect(action).resolves.toStrictEqual({
-            success: false,
-            error: 'Action with ack error',
-          })
-        )
+        await expect(action).resolves.toStrictEqual({
+          success: false,
+          error: 'Action with ack error',
+        })
 
         expect(actionHandler).toHaveBeenCalledTimes(1)
         expect(actionHandler).toHaveBeenCalledWith({

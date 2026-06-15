@@ -8,13 +8,13 @@
   "exports": {
     "./client": {
       "types": "./dist/client.d.ts",
-      "require": "./dist/client.js",
-      "import": "./dist/client.mjs"
+      "import": "./dist/client.mjs",
+      "require": "./dist/client.js"
     },
     "./server": {
       "types": "./dist/server.d.ts",
-      "require": "./dist/server.js",
-      "import": "./dist/server.mjs"
+      "import": "./dist/server.mjs",
+      "require": "./dist/server.js"
     }
   },
   "scripts": {
@@ -23,20 +23,17 @@
     "prettier": "prettier --write src/**/*.ts --config ../../prettier.config.cjs",
     "types-check": "tsc --noemit"
   },
-  "dependencies": {
-    "uuid": "^9.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@tsio/core": "workspace:^",
-    "@types/node": "^20.11.24",
-    "@types/uuid": "^9.0.8",
-    "@types/ws": "^8.5.10",
-    "tsup": "^8.0.1",
-    "typescript": "^5.4.2",
-    "ws": "^8.16.0"
+    "@types/node": "^24.13.2",
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "ws": "^8.21.0"
   },
   "peerDependencies": {
     "@tsio/core": "workspace:^",
-    "ws": "^8.16.0"
+    "ws": "^8.21.0"
   }
 }

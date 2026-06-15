@@ -90,7 +90,7 @@ const attach = <TContext>({
   createContext,
 }: AttachParams<TContext>) => {
   function attachRouter(subRouter: AnyRouter, path = '') {
-    Object.keys(subRouter).forEach(key => {
+    for (const key of Object.keys(subRouter)) {
       const actionKey = key as keyof typeof subRouter
       const action = subRouter[actionKey]
       if (!action) {
@@ -100,7 +100,8 @@ const attach = <TContext>({
       const actionPath = path ? `${path}.${key}` : key
 
       if (isRouter(action)) {
-        return attachRouter(action, actionPath)
+        attachRouter(action, actionPath)
+        continue
       }
 
       adapter.on(actionPath, async input => {
@@ -114,7 +115,7 @@ const attach = <TContext>({
 
         return maybeValidateResponse(action, actionResult) as any
       })
-    })
+    }
   }
 
   return attachRouter(router)
