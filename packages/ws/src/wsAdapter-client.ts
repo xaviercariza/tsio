@@ -5,11 +5,11 @@ function generateRequestId(): string {
   return Math.random().toString(36).substring(2, 10)
 }
 
-function createWsClientProxy<Contract extends ContractRouterType>(
+function wsClient<Contract extends ContractRouterType>(
   socket: WebSocket
 ): TsIoClientAdapter<Contract> {
   const requestCallbacks: Map<string, (data: any) => void> = new Map()
-  const eventsCallbacks: Map<ContractPaths<Contract, 'listener'>, (data: any) => void> = new Map()
+  const eventsCallbacks: Map<ContractPaths<Contract, 'event'>, (data: any) => void> = new Map()
 
   socket.addEventListener('message', event => {
     const data = JSON.parse(event.data.toString())
@@ -57,4 +57,4 @@ function createWsClientProxy<Contract extends ContractRouterType>(
   }
 }
 
-export { createWsClientProxy }
+export { wsClient }

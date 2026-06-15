@@ -1,2 +1,2 @@
-export { createSocketIoClientAdapter } from './client'
-export { createSocketIoServerAdapter } from './server'
+export { socketioClient } from './client'
+export { socketio } from './server'

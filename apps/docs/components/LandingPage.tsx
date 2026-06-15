@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from './LandingPage.module.css'
 
-const code = `const contract = defineContract({
+const code = `const api = contract({
   chat: {
     sendMessage: {
       type: 'action',
@@ -9,7 +9,7 @@ const code = `const contract = defineContract({
       response: MessageSchema,
     },
     onMessage: {
-      type: 'listener',
+      type: 'event',
       data: MessageSchema,
     },
   },
@@ -17,7 +17,7 @@ const code = `const contract = defineContract({
 
 client.actions.chat.sendMessage({ text: 'hello' })
 
-client.listeners.chat.onMessage(message => {
+client.events.chat.onMessage(message => {
   message.id   // string
   message.text // string
 })`
@@ -26,12 +26,12 @@ const features = [
   {
     icon: '01',
     title: 'One contract for both directions',
-    body: 'Describe client-to-server actions and server-to-client listener events in a single Zod-powered contract.',
+    body: 'Describe client-to-server actions and server-to-client events in a single Zod-powered contract.',
   },
   {
     icon: '02',
     title: 'Fully typed clients',
-    body: 'Generate nested action and listener clients without manually duplicating event names or payload types.',
+    body: 'Generate nested action and event clients without manually duplicating event names or payload types.',
   },
   {
     icon: '03',
@@ -62,11 +62,11 @@ export function LandingPage() {
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <span className={styles.badge}>Type-safe realtime protocols for TypeScript</span>
-            <p className={styles.eyebrow}>Contract-first actions and listeners</p>
+            <p className={styles.eyebrow}>Contract-first actions and events</p>
             <h1 className={styles.title}>Build socket APIs without stringly typed events.</h1>
             <p className={styles.subtitle}>
               tsio lets you define a shared contract once and use it to type server handlers, client
-              actions, client listeners, middleware context, and socket transport adapters.
+              actions, client events, middleware context, and socket transport adapters.
             </p>
             <div className={styles.actions}>
               <a href="/docs/getting-started" className={styles.primaryCta}>
@@ -96,8 +96,8 @@ export function LandingPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Built for bidirectional TypeScript apps.</h2>
           <p className={styles.sectionCopy}>
-            Use tsio when the client calls server actions and the server emits typed listener events
-            back to connected clients. The contract keeps both directions in sync.
+            Use tsio when the client calls server actions and the server emits typed events back to
+            connected clients. The contract keeps both directions in sync.
           </p>
           <div className={styles.featureGrid}>
             {features.map(feature => (

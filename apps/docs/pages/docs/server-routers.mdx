@@ -3,14 +3,14 @@
 A server router implements the action leaves from a contract.
 
 ```ts
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 
-const router = tsIo.router.create(a => ({
+const router = tsio.router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.handler(async ({ ctx, input, path, emitEventTo }) => {
+    sendMessage: a.chat.sendMessage.handle(async ({ ctx, input, path, emit }) => {
       const message = await saveMessage(ctx.user.id, input.text)
 
-      emitEventTo('chat.onMessage', ctx.user.socketId, message)
+      emit('chat.onMessage', ctx.user.socketId, message)
 
       return { success: true, data: message }
     }),
@@ -27,11 +27,11 @@ Every handler receives:
   path: string
   ctx: Context
   input: ActionInput
-  emitEventTo: EmitEventToFunction
+  emit: EmitFunction
 }
 ```
 
-`input` is inferred from the action input schema. `ctx` is inferred from `initTsIo.context<Context>()`, plus any middleware refinements.
+`input` is inferred from the action input schema. `ctx` is inferred from `createServer.context<Context>()`, plus any middleware refinements.
 
 ## Fire-and-forget actions
 
@@ -47,8 +47,8 @@ updateTypingState: {
 The handler returns `void`:
 
 ```ts
-a.chat.updateTypingState.handler(({ input, emitEventTo }) => {
-  emitEventTo('chat.onUserTyping', input.chatId, input)
+a.chat.updateTypingState.handle(({ input, emit }) => {
+  emit('chat.onUserTyping', input.chatId, input)
 })
 ```
 
@@ -67,7 +67,7 @@ sendMessage: {
 The handler returns `TResponse<ResponseData>`:
 
 ```ts
-a.chat.sendMessage.handler(async ({ input }) => {
+a.chat.sendMessage.handle(async ({ input }) => {
   const message = await saveMessage(input)
 
   return {
@@ -91,7 +91,7 @@ return {
 The router is attached to a transport adapter.
 
 ```ts
-tsIo.attachRouterToSocket({
+tsio.attach({
   router,
   adapter,
   createContext: () => ({ user, socket }),

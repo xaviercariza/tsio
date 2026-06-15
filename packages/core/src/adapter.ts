@@ -5,7 +5,7 @@ import type {
   ContractRouterType,
   InferActionInput,
   InferActionOutput,
-  InferListenerData,
+  InferEventData,
   TActionWithAck,
   ValueAtPath,
 } from './contract'
@@ -24,8 +24,8 @@ type TsIoServerAdapter<Action extends ContractAction = ContractAction> = {
   on<Event extends string>(event: Event, handler: TsIoServerHandler<Action>): MaybePromise<void>
 }
 
-type ListenerDataAt<Contract extends ContractRouterType, Path extends ContractPaths<Contract, 'listener'>> =
-  InferListenerData<ValueAtPath<Contract, Path>>
+type EventDataAt<Contract extends ContractRouterType, Path extends ContractPaths<Contract, 'event'>> =
+  InferEventData<ValueAtPath<Contract, Path>>
 
 type TsIoClientAdapter<Contract extends ContractRouterType> = {
   emit: <ActionEvent extends ContractPaths<Contract, 'action'>>(
@@ -37,18 +37,18 @@ type TsIoClientAdapter<Contract extends ContractRouterType> = {
       ? (response: TResponse<InferActionOutput<ValueAtPath<Contract, ActionEvent>>>) => void
       : never
   ) => void
-  on: <ListenerEvent extends ContractPaths<Contract, 'listener'>>(
-    action: ListenerEvent,
-    cb: (data: ListenerDataAt<Contract, ListenerEvent>) => void
+  on: <Event extends ContractPaths<Contract, 'event'>>(
+    event: Event,
+    cb: (data: EventDataAt<Contract, Event>) => void
   ) => void
-  unsubscribe: <ListenerEvent extends ContractPaths<Contract, 'listener'>>(event: ListenerEvent) => void
+  unsubscribe: <Event extends ContractPaths<Contract, 'event'>>(event: Event) => void
 }
 
 const isRouter = (action: AnyRouter | AnyAction): action is AnyRouter => {
   return typeof action !== 'function'
 }
 
-type AttachTsIoWebSocketParams<TContext> = {
+type AttachParams<TContext> = {
   router: AnyRouter
   adapter: TsIoServerAdapter<any>
   createContext: () => TContext
@@ -84,12 +84,12 @@ function maybeValidateResponse(action: AnyAction, response: unknown) {
   return response
 }
 
-const attachTsIoToWebSocket = <TContext>({
+const attach = <TContext>({
   router,
   adapter,
   createContext,
-}: AttachTsIoWebSocketParams<TContext>) => {
-  function attach(subRouter: AnyRouter, path = '') {
+}: AttachParams<TContext>) => {
+  function attachRouter(subRouter: AnyRouter, path = '') {
     Object.keys(subRouter).forEach(key => {
       const actionKey = key as keyof typeof subRouter
       const action = subRouter[actionKey]
@@ -100,7 +100,7 @@ const attachTsIoToWebSocket = <TContext>({
       const actionPath = path ? `${path}.${key}` : key
 
       if (isRouter(action)) {
-        return attach(action, actionPath)
+        return attachRouter(action, actionPath)
       }
 
       adapter.on(actionPath, async input => {
@@ -109,7 +109,7 @@ const attachTsIoToWebSocket = <TContext>({
           path: actionPath,
           input: parsedInput,
           ctx: createContext(),
-          emitTo: adapter.emitTo,
+          emit: adapter.emitTo,
         })
 
         return maybeValidateResponse(action, actionResult) as any
@@ -117,8 +117,8 @@ const attachTsIoToWebSocket = <TContext>({
     })
   }
 
-  return attach(router)
+  return attachRouter(router)
 }
 
-export { attachTsIoToWebSocket }
-export type { TsIoClientAdapter, TsIoEventMessage, TsIoServerAdapter, TsIoServerEmitter }
+export { attach }
+export type { AttachParams, TsIoClientAdapter, TsIoEventMessage, TsIoServerAdapter, TsIoServerEmitter }

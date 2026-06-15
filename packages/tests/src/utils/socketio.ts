@@ -3,10 +3,10 @@ import {
   type ContractRouterType,
   type TsIoClient,
   type TsIoServerAdapter,
-  initNewClient,
+  createClient,
 } from '@tsio/core'
-import { createSocketIoClientAdapter } from '@tsio/socketio/client'
-import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+import { socketioClient } from '@tsio/socketio/client'
+import { socketio } from '@tsio/socketio/server'
 import { type Server, createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { Server as IoServer, type Socket as TServerSocket } from 'socket.io'
@@ -14,7 +14,7 @@ import { type Socket as TClientSocket, io as ioc } from 'socket.io-client'
 
 function waitForSocketIoClientToReceiveEvent<Contract extends ContractRouterType>(
   clientSocket: TClientSocket<any>,
-  event: ContractPaths<Contract, 'listener'> | 'connect'
+  event: ContractPaths<Contract, 'event'> | 'connect'
 ) {
   return new Promise<any>(resolve => {
     clientSocket.on(event as any, resolve)
@@ -53,7 +53,7 @@ async function initializeTsIo<Contract extends ContractRouterType>(
 ): Promise<{ socket: TServerSocket<Contract>; adapter: TsIoServerAdapter<any> }> {
   return new Promise(resolve => {
     io.on('connection', socket => {
-      const adapter = createSocketIoServerAdapter(socket)
+      const adapter = socketio(socket)
       resolve({ socket, adapter })
     })
   })
@@ -74,11 +74,11 @@ async function createSockets<Contract extends ContractRouterType>(
   await waitForSocketIoClientToReceiveEvent(socket1, 'connect')
   await waitForSocketIoClientToReceiveEvent(socket2, 'connect')
 
-  const socket1ClientAdapter = createSocketIoClientAdapter(socket1)
-  const socket1Client = initNewClient(socket1ClientAdapter, contract)
+  const socket1ClientAdapter = socketioClient(socket1)
+  const socket1Client = createClient(contract, socket1ClientAdapter)
 
-  const socket2ClientAdapter = createSocketIoClientAdapter(socket2)
-  const socket2Client = initNewClient(socket2ClientAdapter, contract)
+  const socket2ClientAdapter = socketioClient(socket2)
+  const socket2Client = createClient(contract, socket2ClientAdapter)
 
   return {
     io,

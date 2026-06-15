@@ -1,10 +1,10 @@
-import { createSocketIoServerAdapter } from '@tsio/socketio/server'
+import { socketio } from '@tsio/socketio/server'
 import type express from 'express'
 import type http from 'node:http'
 import { Server } from 'socket.io'
-import { chatRouter } from './server/tsio/router'
-import { attachRouterToSocket } from './server/tsio/tsio'
 import { connectUser, disconnectUser } from './server/services'
+import { chatRouter } from './server/tsio/router'
+import { attach } from './server/tsio/tsio'
 
 const createIOServer = (server: http.Server, sessionMiddleware: express.RequestHandler) => {
   const io = new Server(server)
@@ -18,8 +18,8 @@ const createIOServer = (server: http.Server, sessionMiddleware: express.RequestH
 
       console.log(`A user connected ${socket.id}`)
 
-      const adapter = createSocketIoServerAdapter(socket)
-      attachRouterToSocket({ router: chatRouter, adapter, createContext: () => ({ user, socket }) })
+      const adapter = socketio(socket)
+      attach({ router: chatRouter, adapter, createContext: () => ({ user, socket }) })
 
       socket.on('disconnect', async () => {
         console.log(`user disconnected ${socket.id}`)

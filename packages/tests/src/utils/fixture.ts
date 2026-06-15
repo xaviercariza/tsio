@@ -1,4 +1,4 @@
-import { attachTsIoToWebSocket } from '@tsio/core'
+import { attach } from '@tsio/core'
 import { test } from 'vitest'
 import { setupSocketIo } from './socketio'
 import { setupWs } from './ws'
@@ -6,19 +6,19 @@ import { setupWs } from './ws'
 type SocketsFixture = {
   socketIoFixture: {
     setupSocketIo: typeof setupSocketIo
-    attachTsIoToWebSocket: typeof attachTsIoToWebSocket
+    attach: typeof attach
   }
   wsFixture: {
     setupWs: typeof setupWs
-    attachTsIoToWebSocket: typeof attachTsIoToWebSocket
+    attach: typeof attach
   }
 }
 
 export const socketsTest = test.extend<SocketsFixture>({
   socketIoFixture: async ({}, use) => {
-    await use({ setupSocketIo, attachTsIoToWebSocket })
+    await use({ setupSocketIo, attach })
   },
   wsFixture: async ({}, use) => {
-    await use({ setupWs, attachTsIoToWebSocket })
+    await use({ setupWs, attach })
   },
 })

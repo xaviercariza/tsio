@@ -1,11 +1,9 @@
-import { defineContract, initTsIo } from '@tsio/core'
+import { contract, createServer } from '@tsio/core'
 import { describe, expect, vi } from 'vitest'
 import { z } from 'zod'
 import { socketsTest } from './utils'
 
 type Context = { userName: string }
-
-type Contract = typeof contract
 
 const ACTIONS_MOCK = {
   fireAndForget: vi.fn(),
@@ -21,7 +19,7 @@ const PostSchema = z.object({
   body: z.string().optional(),
 })
 
-const contract = defineContract({
+const api = contract({
   actionsRouter: {
     fireAndForget: {
       type: 'action',
@@ -47,16 +45,16 @@ const contract = defineContract({
       response: PostSchema,
     },
   },
-  listenersRouter: {
+  eventsRouter: {
     onActionResponse: {
-      type: 'listener',
+      type: 'event',
       data: PostSchema,
     },
   },
 })
 
 const context: Context = { userName: 'Xavier' }
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 const createContext = () => context
 
 function createPostPayload() {
@@ -77,17 +75,17 @@ function createPostResponse() {
 describe('socketio', () => {
   describe('fire and forget actions', () => {
     socketsTest('handles basic fire and forget action', async ({ socketIoFixture, onTestFinished }) => {
-      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(contract)
+      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(api)
       const actionHandler = vi.fn()
-      const router = tsIo.router.create(a => ({
+      const router = tsio.router.create(a => ({
         actionsRouter: {
           ...ACTIONS_MOCK,
-          fireAndForget: a.actionsRouter.fireAndForget.handler(actionHandler),
+          fireAndForget: a.actionsRouter.fireAndForget.handle(actionHandler),
         },
-        listenersRouter: {},
+        eventsRouter: {},
       }))
 
-      socketIoFixture.attachTsIoToWebSocket({
+      socketIoFixture.attach({
         router,
         adapter: setup.server.adapter,
         createContext,
@@ -101,7 +99,7 @@ describe('socketio', () => {
         path: 'actionsRouter.fireAndForget',
         ctx: context,
         input: actionPayload,
-        emitEventTo: setup.server.adapter.emitTo,
+        emit: setup.server.adapter.emitTo,
       })
 
       onTestFinished(closeConnections)
@@ -110,54 +108,50 @@ describe('socketio', () => {
     socketsTest(
       'handles fire and forget action w/ emit to other client',
       async ({ socketIoFixture, onTestFinished }) => {
-        const { setup, closeConnections } = await socketIoFixture.setupSocketIo(contract)
+        const { setup, closeConnections } = await socketIoFixture.setupSocketIo(api)
         const actionHandler = vi.fn()
         const emittedPost = createPostResponse()
-        const router = tsIo.router.create(a => ({
+        const router = tsio.router.create(a => ({
           actionsRouter: {
             ...ACTIONS_MOCK,
-            fireAndForgetWithEmit: a.actionsRouter.fireAndForgetWithEmit.handler(
-              actionHandler.mockImplementation(({ emitEventTo }) => {
-                emitEventTo(
-                  'listenersRouter.onActionResponse',
-                  setup.client.socket2.socket.id,
-                  emittedPost
-                )
+            fireAndForgetWithEmit: a.actionsRouter.fireAndForgetWithEmit.handle(
+              actionHandler.mockImplementation(({ emit }) => {
+                emit('eventsRouter.onActionResponse', setup.client.socket2.socket.id, emittedPost)
               })
             ),
           },
-          listenersRouter: {},
+          eventsRouter: {},
         }))
 
-        socketIoFixture.attachTsIoToWebSocket({
+        socketIoFixture.attach({
           router,
           adapter: setup.server.adapter,
           createContext,
         })
 
         const emitToAdapter = vi.spyOn(setup.server.adapter, 'emitTo')
-        const listenerHandler = vi.fn()
+        const eventHandler = vi.fn()
         const actionPayload = createPostPayload()
 
-        setup.client.socket2.client.listeners.listenersRouter.onActionResponse(listenerHandler)
+        setup.client.socket2.client.events.eventsRouter.onActionResponse(eventHandler)
         setup.client.socket1.client.actions.actionsRouter.fireAndForgetWithEmit(actionPayload)
 
-        await vi.waitFor(() => expect(listenerHandler).toHaveBeenCalledTimes(1))
+        await vi.waitFor(() => expect(eventHandler).toHaveBeenCalledTimes(1))
 
         expect(actionHandler).toHaveBeenCalledTimes(1)
         expect(actionHandler).toHaveBeenCalledWith({
           path: 'actionsRouter.fireAndForgetWithEmit',
           input: actionPayload,
           ctx: context,
-          emitEventTo: setup.server.adapter.emitTo,
+          emit: setup.server.adapter.emitTo,
         })
         expect(emitToAdapter).toHaveBeenCalledTimes(1)
         expect(emitToAdapter).toHaveBeenCalledWith(
-          'listenersRouter.onActionResponse',
+          'eventsRouter.onActionResponse',
           setup.client.socket2.socket.id,
           emittedPost
         )
-        expect(listenerHandler).toHaveBeenCalledWith({ ...actionPayload, id: 'post-1' })
+        expect(eventHandler).toHaveBeenCalledWith({ ...actionPayload, id: 'post-1' })
 
         onTestFinished(closeConnections)
       }
@@ -166,21 +160,21 @@ describe('socketio', () => {
 
   describe('request-response actions', () => {
     socketsTest('handles basic request-response action w/ success response', async ({ socketIoFixture, onTestFinished }) => {
-      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(contract)
+      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(api)
       const actionHandler = vi.fn()
-      const router = tsIo.router.create(a => ({
+      const router = tsio.router.create(a => ({
         actionsRouter: {
           ...ACTIONS_MOCK,
-          requestResponse: a.actionsRouter.requestResponse.handler(
+          requestResponse: a.actionsRouter.requestResponse.handle(
             actionHandler.mockImplementation(({ input }) => {
               return { success: true, data: { ...input, id: 'post-1' } }
             })
           ),
         },
-        listenersRouter: {},
+        eventsRouter: {},
       }))
 
-      socketIoFixture.attachTsIoToWebSocket({
+      socketIoFixture.attach({
         router,
         adapter: setup.server.adapter,
         createContext,
@@ -194,7 +188,7 @@ describe('socketio', () => {
         path: 'actionsRouter.requestResponse',
         input: actionPayload,
         ctx: context,
-        emitEventTo: setup.server.adapter.emitTo,
+        emit: setup.server.adapter.emitTo,
       })
       await expect(action).resolves.toStrictEqual({
         success: true,
@@ -207,51 +201,47 @@ describe('socketio', () => {
     socketsTest(
       'handles request-response action w/ emit to other client',
       async ({ socketIoFixture, onTestFinished }) => {
-        const { setup, closeConnections } = await socketIoFixture.setupSocketIo(contract)
+        const { setup, closeConnections } = await socketIoFixture.setupSocketIo(api)
         const actionHandler = vi.fn()
-        const router = tsIo.router.create(a => ({
+        const router = tsio.router.create(a => ({
           actionsRouter: {
             ...ACTIONS_MOCK,
-            requestResponseWithEmit: a.actionsRouter.requestResponseWithEmit.handler(
-              actionHandler.mockImplementation(({ input, emitEventTo }) => {
+            requestResponseWithEmit: a.actionsRouter.requestResponseWithEmit.handle(
+              actionHandler.mockImplementation(({ input, emit }) => {
                 const newPost = { ...input, id: 'post-1' }
-                emitEventTo(
-                  'listenersRouter.onActionResponse',
-                  setup.client.socket2.socket.id,
-                  newPost
-                )
+                emit('eventsRouter.onActionResponse', setup.client.socket2.socket.id, newPost)
                 return { success: true, data: newPost }
               })
             ),
           },
-          listenersRouter: {},
+          eventsRouter: {},
         }))
 
-        socketIoFixture.attachTsIoToWebSocket({
+        socketIoFixture.attach({
           router,
           adapter: setup.server.adapter,
           createContext,
         })
 
         const emitToAdapter = vi.spyOn(setup.server.adapter, 'emitTo')
-        const listenerHandler = vi.fn()
+        const eventHandler = vi.fn()
         const actionPayload = createPostPayload()
 
-        setup.client.socket2.client.listeners.listenersRouter.onActionResponse(listenerHandler)
+        setup.client.socket2.client.events.eventsRouter.onActionResponse(eventHandler)
         const action = setup.client.socket1.client.actions.actionsRouter.requestResponseWithEmit(actionPayload)
 
-        await vi.waitFor(() => expect(listenerHandler).toHaveBeenCalledTimes(1))
+        await vi.waitFor(() => expect(eventHandler).toHaveBeenCalledTimes(1))
 
         expect(actionHandler).toHaveBeenCalledTimes(1)
         expect(actionHandler).toHaveBeenCalledWith({
           path: 'actionsRouter.requestResponseWithEmit',
           input: actionPayload,
           ctx: context,
-          emitEventTo: setup.server.adapter.emitTo,
+          emit: setup.server.adapter.emitTo,
         })
         expect(emitToAdapter).toHaveBeenCalledTimes(1)
         expect(emitToAdapter).toHaveBeenCalledWith(
-          'listenersRouter.onActionResponse',
+          'eventsRouter.onActionResponse',
           setup.client.socket2.socket.id,
           { ...actionPayload, id: 'post-1' }
         )
@@ -259,28 +249,28 @@ describe('socketio', () => {
           success: true,
           data: { ...actionPayload, id: 'post-1' },
         })
-        expect(listenerHandler).toHaveBeenCalledWith({ ...actionPayload, id: 'post-1' })
+        expect(eventHandler).toHaveBeenCalledWith({ ...actionPayload, id: 'post-1' })
 
         onTestFinished(closeConnections)
       }
     )
 
     socketsTest('handles basic request-response action w/ error response', async ({ socketIoFixture, onTestFinished }) => {
-      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(contract)
+      const { setup, closeConnections } = await socketIoFixture.setupSocketIo(api)
       const actionHandler = vi.fn()
-      const router = tsIo.router.create(a => ({
+      const router = tsio.router.create(a => ({
         actionsRouter: {
           ...ACTIONS_MOCK,
-          requestResponseError: a.actionsRouter.requestResponseError.handler(
+          requestResponseError: a.actionsRouter.requestResponseError.handle(
             actionHandler.mockImplementation(() => {
               return { success: false, error: 'Action with ack error' }
             })
           ),
         },
-        listenersRouter: {},
+        eventsRouter: {},
       }))
 
-      socketIoFixture.attachTsIoToWebSocket({
+      socketIoFixture.attach({
         router,
         adapter: setup.server.adapter,
         createContext,
@@ -298,7 +288,7 @@ describe('socketio', () => {
         path: 'actionsRouter.requestResponseError',
         input: actionPayload,
         ctx: context,
-        emitEventTo: setup.server.adapter.emitTo,
+        emit: setup.server.adapter.emitTo,
       })
 
       onTestFinished(closeConnections)

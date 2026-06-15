@@ -1,4 +1,4 @@
-import { defineContract, initTsIo } from '@tsio/core'
+import { contract, createServer } from '@tsio/core'
 import { expectTypeOf } from 'vitest'
 import { z } from 'zod'
 
@@ -12,7 +12,7 @@ type Context = {
   user: User | null
 }
 
-const contract = defineContract({
+const api = contract({
   actions: {
     secureAction: {
       type: 'action',
@@ -26,9 +26,9 @@ const contract = defineContract({
   events: {},
 })
 
-const tsIo = initTsIo.context<Context>().create(contract)
+const tsio = createServer.context<Context>().create(api)
 
-const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+const requireUser = tsio.middleware(async ({ ctx, next }) => {
   expectTypeOf(ctx.user).toEqualTypeOf<User | null>()
 
   if (!ctx.user) {
@@ -56,15 +56,15 @@ const requireAdmin = requireUser.pipe(async ({ ctx, next }) => {
   })
 })
 
-tsIo.router.create(a => ({
+tsio.router.create(a => ({
   actions: {
-    secureAction: a.actions.secureAction.use(requireAdmin).handler(({ ctx, input }) => {
+    secureAction: a.actions.secureAction.use(requireAdmin).handle(({ ctx, input }) => {
       expectTypeOf(ctx.requestId).toEqualTypeOf<string>()
       expectTypeOf(ctx.user).toEqualTypeOf<User>()
       expectTypeOf(ctx.isAdmin).toEqualTypeOf<true>()
       expectTypeOf(input).toEqualTypeOf<{ reason: string }>()
     }),
-    publicAction: a.actions.publicAction.handler(({ ctx, input }) => {
+    publicAction: a.actions.publicAction.handle(({ ctx, input }) => {
       expectTypeOf(ctx.user).toEqualTypeOf<User | null>()
       expectTypeOf(input).toEqualTypeOf<{ message: string }>()
     }),

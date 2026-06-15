@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { ContractRouterType, EmitEventToFunction } from './contract'
+import type { ContractRouterType, EmitFunction } from './contract'
 import type { AnyMiddlewareFn } from './middleware'
 import type { MaybePromise, TResponse } from './types'
 
@@ -15,14 +15,14 @@ interface ActionCallOptions<Contract extends ContractRouterType, TContext, TInpu
   path: string
   ctx: TContext
   input: TInput
-  emitTo: EmitEventToFunction<Contract>
+  emit: EmitFunction<Contract>
 }
 
 type ActionResolverParams<Contract extends ContractRouterType, TContext, TInput> = {
   path: string
   ctx: TContext
   input: TInput
-  emitEventTo: EmitEventToFunction<Contract>
+  emit: EmitFunction<Contract>
 }
 
 type ActionResult<TOutput> = TOutput extends void ? void : TResponse<TOutput>

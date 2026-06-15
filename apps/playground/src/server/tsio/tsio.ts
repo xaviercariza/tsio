@@ -1,13 +1,13 @@
-import { initTsIo } from '@tsio/core'
+import { createServer } from '@tsio/core'
+import type { Socket } from 'socket.io'
 import type { UserProfile } from '../../types'
 import { chatContract } from './contract'
-import type { Socket } from 'socket.io'
 
 type Context = { user: UserProfile | null; socket: Socket }
 
-const tsIo = initTsIo.context<Context>().create(chatContract)
-const router = tsIo.router
-const middleware = tsIo.middleware
-const attachRouterToSocket = tsIo.attachRouterToSocket
+const tsio = createServer.context<Context>().create(chatContract)
+const router = tsio.router
+const middleware = tsio.middleware
+const attach = tsio.attach
 
-export { attachRouterToSocket, middleware, router }
+export { attach, middleware, router }

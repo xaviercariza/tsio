@@ -4,10 +4,10 @@
 
 ## Contract
 
-The contract describes the protocol. It is a nested object whose leaves are either actions or listeners.
+The contract describes the protocol. It is a nested object whose leaves are either actions or events.
 
 ```ts
-const contract = defineContract({
+const api = contract({
   room: {
     join: {
       type: 'action',
@@ -15,7 +15,7 @@ const contract = defineContract({
       response: RoomSchema,
     },
     onUserJoined: {
-      type: 'listener',
+      type: 'event',
       data: UserJoinedSchema,
     },
   },
@@ -52,21 +52,21 @@ sendMessage: {
 
 If an action has a `response` schema, the generated client action returns a response union.
 
-## Listeners
+## Events
 
-Listeners are messages sent from the server to a client.
+Events are messages sent from the server to a client.
 
 ```ts
 onMessageReceived: {
-  type: 'listener',
+  type: 'event',
   data: MessageSchema,
 }
 ```
 
-Server handlers emit listener events with `emitEventTo`:
+Server handlers emit events with `emit`:
 
 ```ts
-emitEventTo('chat.onMessageReceived', socketId, message)
+emit('chat.onMessageReceived', socketId, message)
 ```
 
 The path and payload are both type-checked.
@@ -76,30 +76,30 @@ The path and payload are both type-checked.
 A router implements the action leaves from a contract.
 
 ```ts
-const router = tsIo.router.create(a => ({
+const router = tsio.router.create(a => ({
   chat: {
-    sendMessage: a.chat.sendMessage.handler(({ input }) => {
+    sendMessage: a.chat.sendMessage.handle(({ input }) => {
       return { success: true, data: saveMessage(input) }
     }),
   },
 }))
 ```
 
-Listeners are not implemented in the server router because they are emitted by server handlers.
+Events are not implemented in the server router because they are emitted by server handlers.
 
 ## Client
 
 A client is generated from a transport adapter and the same contract.
 
 ```ts
-const client = initNewClient(adapter, contract)
+const client = createClient(api, adapter)
 ```
 
 It exposes two trees:
 
 ```ts
 client.actions
-client.listeners
+client.events
 ```
 
 The tree shape mirrors the contract, while the leaf types are inferred from Zod schemas.
@@ -109,7 +109,7 @@ The tree shape mirrors the contract, while the leaf types are inferred from Zod 
 Middleware runs before the action handler. It can reject a request, call `next()`, or refine context for the next middleware and final handler.
 
 ```ts
-const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+const requireUser = tsio.middleware(async ({ ctx, next }) => {
   if (!ctx.user) return { ok: false, error: new Error('Unauthorized') }
   return next({ ctx: { user: ctx.user } })
 })

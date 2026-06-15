@@ -1,4 +1,4 @@
-import { defineContract, initTsIo, type TsIoServerAdapter } from '@tsio/core'
+import { contract, createServer, type TsIoServerAdapter } from '@tsio/core'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
@@ -16,7 +16,7 @@ function createAdapter() {
 
 describe('core runtime', () => {
   it('registers nested action paths and forwards resolver params', async () => {
-    const contract = defineContract({
+    const api = contract({
       posts: {
         create: {
           type: 'action',
@@ -27,20 +27,20 @@ describe('core runtime', () => {
       events: {},
     })
     const ctx = { requestId: 'request-1' }
-    const tsIo = initTsIo.context<typeof ctx>().create(contract)
+    const tsio = createServer.context<typeof ctx>().create(api)
     const actionHandler = vi.fn(({ input }) => ({
       success: true as const,
       data: { id: 'post-1', ...input },
     }))
-    const router = tsIo.router.create(a => ({
+    const router = tsio.router.create(a => ({
       posts: {
-        create: a.posts.create.handler(actionHandler),
+        create: a.posts.create.handle(actionHandler),
       },
       events: {},
     }))
     const { adapter, handlers } = createAdapter()
 
-    tsIo.attachRouterToSocket({ router, adapter, createContext: () => ctx })
+    tsio.attach({ router, adapter, createContext: () => ctx })
     const result = await handlers.get('posts.create')?.({ title: 'Hello' })
 
     expect(result).toStrictEqual({ success: true, data: { id: 'post-1', title: 'Hello' } })
@@ -48,12 +48,12 @@ describe('core runtime', () => {
       path: 'posts.create',
       ctx,
       input: { title: 'Hello' },
-      emitEventTo: adapter.emitTo,
+      emit: adapter.emitTo,
     })
   })
 
   it('validates action input when validation is enabled', async () => {
-    const contract = defineContract({
+    const api = contract({
       posts: {
         create: {
           type: 'action',
@@ -64,27 +64,27 @@ describe('core runtime', () => {
       },
       events: {},
     })
-    const tsIo = initTsIo.context<object>().create(contract)
+    const tsio = createServer.context<object>().create(api)
     const actionHandler = vi.fn(() => ({
       success: true as const,
       data: { id: 'post-1', title: 'Hello' },
     }))
-    const router = tsIo.router.create(a => ({
+    const router = tsio.router.create(a => ({
       posts: {
-        create: a.posts.create.handler(actionHandler),
+        create: a.posts.create.handle(actionHandler),
       },
       events: {},
     }))
     const { adapter, handlers } = createAdapter()
 
-    tsIo.attachRouterToSocket({ router, adapter, createContext: () => ({}) })
+    tsio.attach({ router, adapter, createContext: () => ({}) })
 
     await expect(handlers.get('posts.create')?.({ title: 123 })).rejects.toThrow()
     expect(actionHandler).not.toHaveBeenCalled()
   })
 
   it('validates successful action responses when validation is enabled', async () => {
-    const contract = defineContract({
+    const api = contract({
       posts: {
         create: {
           type: 'action',
@@ -95,10 +95,10 @@ describe('core runtime', () => {
       },
       events: {},
     })
-    const tsIo = initTsIo.context<object>().create(contract)
-    const router = tsIo.router.create(a => ({
+    const tsio = createServer.context<object>().create(api)
+    const router = tsio.router.create(a => ({
       posts: {
-        create: a.posts.create.handler(({ input }) => ({
+        create: a.posts.create.handle(({ input }) => ({
           success: true as const,
           data: { id: 123, title: input.title } as any,
         })),
@@ -107,7 +107,7 @@ describe('core runtime', () => {
     }))
     const { adapter, handlers } = createAdapter()
 
-    tsIo.attachRouterToSocket({ router, adapter, createContext: () => ({}) })
+    tsio.attach({ router, adapter, createContext: () => ({}) })
 
     await expect(handlers.get('posts.create')?.({ title: 'Hello' })).rejects.toThrow()
   })

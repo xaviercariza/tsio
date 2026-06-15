@@ -3,13 +3,13 @@ import {
   type ContractRouterType,
   type TsIoClient,
   type TsIoServerAdapter,
-  initNewClient,
+  createClient,
 } from '@tsio/core'
-import { createWsClientProxy } from '@tsio/ws/client'
-import { type TsIoWebSocket, type TsIoWebSocketServer, createWsServerProxy } from '@tsio/ws/server'
+import { wsClient } from '@tsio/ws/client'
+import { type TsIoWebSocket, type TsIoWebSocketServer, ws } from '@tsio/ws/server'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import type ws from 'ws'
+import type wsModule from 'ws'
 import { WebSocket, WebSocketServer } from 'ws'
 
 function generateSocketIdMock(): string {
@@ -17,8 +17,8 @@ function generateSocketIdMock(): string {
 }
 
 function waitForWsClientToReceiveEvent<Contract extends ContractRouterType>(
-  clientSocket: ws.WebSocket,
-  event: ContractPaths<Contract, 'listener'> | 'connect'
+  clientSocket: wsModule.WebSocket,
+  event: ContractPaths<Contract, 'event'> | 'connect'
 ) {
   return new Promise<any>(resolve => {
     clientSocket.on(event as any, resolve)
@@ -26,7 +26,7 @@ function waitForWsClientToReceiveEvent<Contract extends ContractRouterType>(
 }
 
 function waitForWsServerToReceiveEvent<Contract extends ContractRouterType>(
-  serverSocket: ws.WebSocket,
+  serverSocket: wsModule.WebSocket,
   event: ContractPaths<Contract, 'action'>
 ) {
   return new Promise<any>(resolve => {
@@ -65,7 +65,7 @@ async function initializeTsIo(wss: TsIoWebSocketServer): Promise<WsServer> {
       // @ts-ignore
       socket.id = uuid
 
-      const adapter = createWsServerProxy(wss, socket)
+      const adapter = ws(wss, socket)
 
       function onSocketPostError(e: Error) {
         console.log('onSocketPostError: ', e)
@@ -102,8 +102,8 @@ async function createClientSocket<Contract extends ContractRouterType>(
 
   socket.id = uuid
 
-  const adapter = createWsClientProxy(socket)
-  const client = initNewClient(adapter, contract)
+  const adapter = wsClient(socket)
+  const client = createClient(contract, adapter)
 
   socket.emit('connection')
 

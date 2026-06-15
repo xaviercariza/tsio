@@ -5,10 +5,10 @@ Contracts are the public protocol for a `tsio` application. They should be small
 ## Define a contract
 
 ```ts
-import { defineContract } from '@tsio/core'
+import { contract } from '@tsio/core'
 import { z } from 'zod'
 
-export const contract = defineContract({
+export const api = contract({
   chat: {
     sendMessage: {
       type: 'action',
@@ -16,7 +16,7 @@ export const contract = defineContract({
       response: z.object({ id: z.string(), text: z.string() }),
     },
     onMessage: {
-      type: 'listener',
+      type: 'event',
       data: z.object({ id: z.string(), text: z.string() }),
     },
   },
@@ -38,24 +38,24 @@ export const contract = defineContract({
 
 Use `response` for request/response actions. Omit `response` for fire-and-forget actions.
 
-## Listener shape
+## Event shape
 
 ```ts
 {
-  type: 'listener'
+  type: 'event'
   data: z.ZodTypeAny
   validate?: boolean
 }
 ```
 
-Listeners describe server-to-client payloads. Server handlers emit listener events with `emitEventTo`.
+Events describe server-to-client payloads. Server handlers emit events with `emit`.
 
 ## Nested routers
 
 Contracts can be nested to keep large protocols organized:
 
 ```ts
-const contract = defineContract({
+const api = contract({
   rooms: {
     members: {
       invite: {
@@ -63,7 +63,7 @@ const contract = defineContract({
         input: InviteMemberSchema,
       },
       onInvited: {
-        type: 'listener',
+        type: 'event',
         data: InvitedSchema,
       },
     },

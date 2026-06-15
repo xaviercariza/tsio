@@ -1,1 +1,1 @@
-export type { AnyEmitEventToFunction, EmitEventToFunction } from './contract'
+export type { AnyEmitFunction, EmitFunction } from './contract'

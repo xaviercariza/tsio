@@ -18,7 +18,7 @@ type Context = {
 Create a middleware that rejects unauthenticated calls and forwards a non-null user:
 
 ```ts
-const requireUser = tsIo.middleware(async ({ ctx, next }) => {
+const requireUser = tsio.middleware(async ({ ctx, next }) => {
   if (!ctx.user) {
     return { ok: false, error: new Error('Unauthorized') }
   }
@@ -40,7 +40,7 @@ Because TypeScript narrows `ctx.user` after the guard, the context patch is infe
 Now protected handlers receive a non-null user:
 
 ```ts
-a.chat.sendMessage.use(requireUser).handler(({ ctx }) => {
+a.chat.sendMessage.use(requireUser).handle(({ ctx }) => {
   ctx.user.id // User, not User | null
 })
 ```
@@ -66,7 +66,7 @@ const requireAdmin = requireUser.pipe(async ({ ctx, next }) => {
 A handler using `requireAdmin` receives all accumulated refinements:
 
 ```ts
-a.admin.deleteRoom.use(requireAdmin).handler(({ ctx }) => {
+a.admin.deleteRoom.use(requireAdmin).handle(({ ctx }) => {
   ctx.user.role // 'admin' | 'member'
   ctx.isAdmin  // true
 })
