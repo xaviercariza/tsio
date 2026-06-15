@@ -1,14 +1,7 @@
-import { prisma } from '../prisma'
+import { disconnectUser as disconnectMemoryUser } from '../store'
 
 const disconnectUser = async (userId: string) => {
-  await prisma.user.update({
-    where: {
-      id: userId,
-    },
-    data: {
-      socketId: null,
-    },
-  })
+  disconnectMemoryUser(userId)
 }
 
 export { disconnectUser }

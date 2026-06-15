@@ -1,41 +1,32 @@
 import bcrypt from 'bcrypt'
-import { prisma } from '../prisma'
 import type { Response, UserProfile } from '../../types'
+import { createUser, getUserWithPasswordByNickname } from '../store'
 
 const signIn = async (nickname: string, password: string): Promise<Response<UserProfile>> => {
-  return await prisma.$transaction(async tx => {
-    const existingUser = await tx.user.findUnique({
-      where: {
-        nickname,
-      },
-    })
+  const existingUser = getUserWithPasswordByNickname(nickname)
 
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    if (existingUser) {
-      const isValidPassword = bcrypt.compareSync(password, hashedPassword)
-      if (isValidPassword) {
-        return {
-          success: true,
-          data: existingUser,
-        }
+  if (existingUser) {
+    const isValidPassword = await bcrypt.compare(password, existingUser.password)
+    if (isValidPassword) {
+      return {
+        success: true,
+        data: {
+          id: existingUser.id,
+          nickname: existingUser.nickname,
+        },
       }
-
-      return { success: false, error: 'User already taken', code: 409 }
     }
 
-    const user = await tx.user.create({
-      data: {
-        nickname,
-        password: hashedPassword,
-      },
-    })
+    return { success: false, error: 'Invalid password', code: 401 }
+  }
 
-    return {
-      success: true,
-      data: user,
-    }
-  })
+  const hashedPassword = await bcrypt.hash(password, 12)
+  const user = createUser(nickname, hashedPassword)
+
+  return {
+    success: true,
+    data: user,
+  }
 }
 
 export { signIn }
