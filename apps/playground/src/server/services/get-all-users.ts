@@ -1,16 +1,8 @@
-import { prisma } from '../prisma'
 import type { Response, UserProfile } from '../../types'
+import { getAllUsers } from '../store'
 
 const getAllUser = async (filterByNickname?: string): Promise<Response<UserProfile[]>> => {
-  const users = await prisma.user.findMany({
-    where: {
-      NOT: {
-        nickname: filterByNickname,
-      },
-    },
-  })
-
-  return { success: true, data: users }
+  return { success: true, data: getAllUsers(filterByNickname) }
 }
 
 export { getAllUser }
