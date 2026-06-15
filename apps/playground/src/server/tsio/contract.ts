@@ -8,6 +8,7 @@ const chatContract = contract({
       type: 'action',
       input: NewMessageSchema,
       response: GroupSchema,
+      options: { validate: true },
     },
     onMessageReceived: {
       type: 'event',
@@ -15,7 +16,8 @@ const chatContract = contract({
     },
     updateTypingState: {
       type: 'action',
-      input: z.object({ chatId: z.string(), userId: z.string(), isTyping: z.boolean() }),
+      input: z.object({ chatId: z.string(), isTyping: z.boolean() }),
+      options: { validate: true },
     },
     onUserIsTyping: {
       type: 'event',

@@ -21,10 +21,21 @@ function socketio<Action extends ContractAction>(
     },
     on: (event, handler) => {
       socket.on(event as string, async (data, callback) => {
-        const response = await handler(data)
+        try {
+          const response = await handler(data)
 
-        if (typeof response === 'object') {
-          callback({ data: response })
+          if (typeof response === 'object' && callback) {
+            callback({ data: response })
+          }
+        } catch (cause) {
+          if (callback) {
+            callback({
+              data: {
+                success: false,
+                error: cause instanceof Error ? cause.message : 'Unexpected error',
+              },
+            })
+          }
         }
       })
     },
