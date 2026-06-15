@@ -1,16 +1,8 @@
-import { prisma } from '../prisma'
 import type { Response, UserProfile } from '../../types'
+import { getUserByNickname } from '../store'
 
 const getUser = async (nickname: string): Promise<Response<UserProfile | null>> => {
-  const user = await prisma.user.findUnique({
-    where: {
-      nickname,
-    },
-    select: {
-      id: true,
-      nickname: true,
-    },
-  })
+  const user = getUserByNickname(nickname)
 
   if (!user) {
     return { success: false, error: 'User not found', code: 404 }
