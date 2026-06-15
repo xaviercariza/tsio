@@ -2,88 +2,41 @@ import { createClient, type TsIoClient } from '@tsio/core'
 import { socketioClient } from '@tsio/socketio/client'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { io } from 'socket.io-client'
 import { chatContract } from '../server/tsio/contract'
-import type { DemoSnapshot, Group, Message, UserProfile } from '../types'
+import type { DemoSnapshot, Group, UserProfile } from '../types'
 import { api } from '../utils/api'
 import { Avatar } from './Avatar'
 import { Spinner } from './Spinner'
-
-type ActivityKind = 'action' | 'event' | 'connection' | 'error'
-
-type ActivityEntry = {
-  id: string
-  at: string
-  actor: string
-  kind: ActivityKind
-  name: string
-  detail: string
-}
-
-type AddActivity = (entry: Omit<ActivityEntry, 'id' | 'at'>) => void
-
-const activityKindClassNames: Record<ActivityKind, string> = {
-  action: 'bg-blue-50 text-blue-700 border-blue-200',
-  event: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  connection: 'bg-slate-50 text-slate-700 border-slate-200',
-  error: 'bg-red-50 text-red-700 border-red-200',
-}
-
-function createActivity(entry: Omit<ActivityEntry, 'id' | 'at'>): ActivityEntry {
-  return {
-    ...entry,
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    at: new Date().toLocaleTimeString(),
-  }
-}
-
-function getMessagePreview(message: Message | undefined) {
-  if (!message) {
-    return 'chat updated'
-  }
-
-  return `${message.sender.nickname}: ${message.text}`
-}
 
 function DemoChatPanel({
   user,
   peer,
   initialChat,
-  addActivity,
 }: {
   user: UserProfile
   peer: UserProfile
   initialChat: Group
-  addActivity: AddActivity
 }) {
   const [chat, setChat] = useState(initialChat)
   const [text, setText] = useState('')
   const [connected, setConnected] = useState(false)
   const [sending, setSending] = useState(false)
   const [typingUser, setTypingUser] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
   const clientRef = useRef<TsIoClient<typeof chatContract> | null>(null)
-  const socketRef = useRef<Socket | null>(null)
   const typingStateRef = useRef(false)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const sendTypingState = useCallback(
-    (isTyping: boolean) => {
-      const client = clientRef.current
-      if (!client || typingStateRef.current === isTyping) {
-        return
-      }
+  const sendTypingState = useCallback((isTyping: boolean) => {
+    const client = clientRef.current
+    if (!client || typingStateRef.current === isTyping) {
+      return
+    }
 
-      typingStateRef.current = isTyping
-      client.actions.chat.updateTypingState({ chatId: initialChat.id, isTyping })
-      addActivity({
-        actor: user.nickname,
-        kind: 'action',
-        name: 'chat.updateTypingState',
-        detail: isTyping ? 'isTyping: true' : 'isTyping: false',
-      })
-    },
-    [addActivity, initialChat.id, user.nickname]
-  )
+    typingStateRef.current = isTyping
+    client.actions.chat.updateTypingState({ chatId: initialChat.id, isTyping })
+  }, [initialChat.id])
 
   useEffect(() => {
     setChat(initialChat)
@@ -96,17 +49,10 @@ function DemoChatPanel({
     })
     const client = createClient(chatContract, socketioClient(socket))
 
-    socketRef.current = socket
     clientRef.current = client
 
     const messageEvent = client.events.chat.onMessageReceived(nextChat => {
       setChat(nextChat)
-      addActivity({
-        actor: user.nickname,
-        kind: 'event',
-        name: 'chat.onMessageReceived',
-        detail: getMessagePreview(nextChat.messages.at(-1)),
-      })
     })
 
     const typingEvent = client.events.chat.onUserIsTyping(event => {
@@ -115,42 +61,20 @@ function DemoChatPanel({
       }
 
       setTypingUser(event.isTyping ? event.nickname : null)
-      addActivity({
-        actor: user.nickname,
-        kind: 'event',
-        name: 'chat.onUserIsTyping',
-        detail: `${event.nickname}: ${event.isTyping}`,
-      })
     })
 
     socket.on('connect', () => {
       setConnected(true)
-      addActivity({
-        actor: user.nickname,
-        kind: 'connection',
-        name: 'socket.connect',
-        detail: socket.id ?? user.id,
-      })
+      setSendError(null)
     })
 
     socket.on('disconnect', () => {
       setConnected(false)
-      addActivity({
-        actor: user.nickname,
-        kind: 'connection',
-        name: 'socket.disconnect',
-        detail: user.id,
-      })
     })
 
     socket.on('connect_error', error => {
       setConnected(false)
-      addActivity({
-        actor: user.nickname,
-        kind: 'error',
-        name: 'socket.connect_error',
-        detail: error.message,
-      })
+      setSendError(error.message)
     })
 
     return () => {
@@ -158,13 +82,12 @@ function DemoChatPanel({
       typingEvent.unsubscribe()
       socket.disconnect()
       clientRef.current = null
-      socketRef.current = null
 
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current)
       }
     }
-  }, [addActivity, initialChat.id, user.id, user.nickname])
+  }, [initialChat.id, user.id])
 
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextText = event.target.value
@@ -194,12 +117,7 @@ function DemoChatPanel({
 
     setSending(true)
     sendTypingState(false)
-    addActivity({
-      actor: user.nickname,
-      kind: 'action',
-      name: 'chat.sendMessage',
-      detail: messageText,
-    })
+    setSendError(null)
 
     const result = await client.actions.chat.sendMessage({
       chatId: chat.id,
@@ -210,12 +128,7 @@ function DemoChatPanel({
       setChat(result.data)
       setText('')
     } else {
-      addActivity({
-        actor: user.nickname,
-        kind: 'error',
-        name: 'chat.sendMessage',
-        detail: result.error,
-      })
+      setSendError(result.error)
     }
 
     setSending(false)
@@ -264,7 +177,7 @@ function DemoChatPanel({
 
       <div className="border-t border-slate-200 bg-white p-3">
         <div className="mb-2 h-5 text-xs text-slate-500">
-          {typingUser ? `${typingUser} is typing` : `To ${peer.nickname}`}
+          {sendError ?? (typingUser ? `${typingUser} is typing` : `To ${peer.nickname}`)}
         </div>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
@@ -287,49 +200,9 @@ function DemoChatPanel({
   )
 }
 
-function ProtocolActivity({ entries }: { entries: ActivityEntry[] }) {
-  return (
-    <section className="flex min-h-[360px] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm xl:h-[calc(100vh-9rem)]">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Live protocol
-        </h2>
-      </div>
-      <ol className="flex-1 space-y-2 overflow-y-auto p-3">
-        {entries.map(entry => (
-          <li key={entry.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span
-                className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${activityKindClassNames[entry.kind]}`}
-              >
-                {entry.kind}
-              </span>
-              <span className="text-xs text-slate-400">{entry.at}</span>
-            </div>
-            <div className="font-mono text-xs font-semibold text-slate-900">{entry.name}</div>
-            <div className="mt-1 text-xs text-slate-500">
-              {entry.actor} · {entry.detail}
-            </div>
-          </li>
-        ))}
-        {!entries.length && (
-          <li className="rounded-md border border-dashed border-slate-300 p-4 text-sm text-slate-400">
-            Waiting for socket activity
-          </li>
-        )}
-      </ol>
-    </section>
-  )
-}
-
 export function DemoPlayground() {
   const [snapshot, setSnapshot] = useState<DemoSnapshot | null>(null)
-  const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [error, setError] = useState<string | null>(null)
-
-  const addActivity = useCallback<AddActivity>(entry => {
-    setActivity(current => [createActivity(entry), ...current].slice(0, 24))
-  }, [])
 
   useEffect(() => {
     let ignore = false
@@ -399,29 +272,20 @@ export function DemoPlayground() {
         <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <h1 className="text-2xl font-semibold text-slate-950">tsio playground</h1>
-            <div className="mt-1 font-mono text-xs text-slate-500">
-              contract · router middleware · typed client
-            </div>
-          </div>
-          <div className="rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-500 shadow-sm">
-            chat.sendMessage → chat.onMessageReceived
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_22rem]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <DemoChatPanel
             user={alice}
             peer={bob}
             initialChat={snapshot.chat}
-            addActivity={addActivity}
           />
           <DemoChatPanel
             user={bob}
             peer={alice}
             initialChat={snapshot.chat}
-            addActivity={addActivity}
           />
-          <ProtocolActivity entries={activity} />
         </div>
       </div>
     </main>
