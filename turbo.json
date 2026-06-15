@@ -12,7 +12,9 @@
       "persistent": true
     },
     "prettier": {},
-    "types-check": {},
+    "types-check": {
+      "dependsOn": ["^build"]
+    },
     "test": {}
   }
 }
