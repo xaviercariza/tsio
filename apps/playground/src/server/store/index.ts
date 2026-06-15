@@ -217,6 +217,7 @@ export {
   getAllUsers,
   getGroup,
   getGroupsForUser,
+  getUserById,
   getUserByNickname,
   getUserSocketId,
   getUserWithPasswordByNickname,
