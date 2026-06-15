@@ -1,6 +1,16 @@
-# Example
+# tsio Playground
 
-To run this example:
+Two-user local demo for `tsio` contracts, typed actions, server-emitted events, and auth middleware.
 
-- `npm install` or `yarn`
-- `npm run dev` or `yarn dev`
+Run it from the repository root:
+
+```bash
+pnpm install
+pnpm --filter @tsio/playground start
+```
+
+Then open:
+
+```txt
+http://localhost:3010
+```

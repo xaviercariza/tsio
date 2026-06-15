@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { Group, Message, UserProfile } from '../../types'
+import type { DemoSnapshot, Group, Message, UserProfile } from '../../types'
 
 type StoredUser = UserProfile & {
   password: string
@@ -16,6 +16,23 @@ const users = new Map<string, StoredUser>()
 const usersByNickname = new Map<string, string>()
 const groups = new Map<string, StoredGroup>()
 const messages = new Map<string, Message>()
+
+const demoUserSeeds: StoredUser[] = [
+  {
+    id: 'demo-alice',
+    nickname: 'Alice',
+    password: 'demo',
+    socketId: null,
+  },
+  {
+    id: 'demo-bob',
+    nickname: 'Bob',
+    password: 'demo',
+    socketId: null,
+  },
+]
+
+const demoChatId = 'demo-chat'
 
 function toUserProfile(user: StoredUser): UserProfile {
   return {
@@ -59,6 +76,16 @@ function createUser(nickname: string, password: string): UserProfile {
   usersByNickname.set(user.nickname, user.id)
 
   return toUserProfile(user)
+}
+
+function upsertUser(user: StoredUser): StoredUser {
+  const existingUser = users.get(user.id)
+  const nextUser = existingUser ? { ...user, socketId: existingUser.socketId } : user
+
+  users.set(nextUser.id, nextUser)
+  usersByNickname.set(nextUser.nickname, nextUser.id)
+
+  return nextUser
 }
 
 function getAllUsers(exceptNickname?: string): UserProfile[] {
@@ -178,24 +205,42 @@ function createMessage(input: {
   groupId: string
   text: string
   senderId: string
-  receiverId: string
+  receiverId?: string
 }): Group {
   const sender = getStoredUserById(input.senderId)
-  const receiver = getStoredUserById(input.receiverId)
+  let group = groups.get(input.groupId)
 
-  if (!sender || !receiver) {
-    throw new Error('Sender or receiver not found')
+  if (!sender) {
+    throw new Error('Sender not found')
   }
 
-  const group = getOrCreateGroup(input.groupId, [input.senderId, input.receiverId])
+  if (!group) {
+    if (!input.receiverId) {
+      throw new Error('Chat not found')
+    }
+
+    group = getOrCreateGroup(input.groupId, [input.senderId, input.receiverId])
+  }
+
+  if (!group.userIds.includes(input.senderId)) {
+    throw new Error('Sender does not belong to this chat')
+  }
+
+  const receiverId = input.receiverId ?? group.userIds.find(userId => userId !== input.senderId)
+  const receiver = receiverId ? getStoredUserById(receiverId) : null
+
+  if (!receiver) {
+    throw new Error('Receiver not found')
+  }
+
   const message: Message = {
     id: randomUUID(),
     text: input.text,
     senderId: input.senderId,
-    receiverId: input.receiverId,
+    receiverId: receiver.id,
     sender: toUserProfile(sender),
     receiver: toUserProfile(receiver),
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   }
 
   messages.set(message.id, message)
@@ -209,12 +254,55 @@ function createMessage(input: {
   return groupSnapshot
 }
 
+function seedDemoData(): DemoSnapshot {
+  for (const user of demoUserSeeds) {
+    upsertUser(user)
+  }
+
+  const alice = demoUserSeeds[0]
+  const bob = demoUserSeeds[1]
+
+  if (!alice || !bob) {
+    throw new Error('Demo users could not be created')
+  }
+
+  const group = getOrCreateGroup(demoChatId, [alice.id, bob.id])
+
+  if (!group.messageIds.length) {
+    createMessage({
+      groupId: demoChatId,
+      senderId: alice.id,
+      text: 'This message came from the seeded in-memory store.',
+    })
+    createMessage({
+      groupId: demoChatId,
+      senderId: bob.id,
+      text: 'Send a new message to watch the typed action and event flow.',
+    })
+  }
+
+  const chat = getGroup(demoChatId)
+  if (!chat) {
+    throw new Error('Demo chat could not be created')
+  }
+
+  return {
+    users: demoUserSeeds.map(toUserProfile),
+    chat,
+  }
+}
+
+function getDemoSnapshot(): DemoSnapshot {
+  return seedDemoData()
+}
+
 export {
   connectUser,
   createMessage,
   createUser,
   disconnectUser,
   getAllUsers,
+  getDemoSnapshot,
   getGroup,
   getGroupsForUser,
   getUserById,
@@ -222,4 +310,5 @@ export {
   getUserSocketId,
   getUserWithPasswordByNickname,
   searchUsers,
+  seedDemoData,
 }

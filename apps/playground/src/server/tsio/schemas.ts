@@ -7,9 +7,7 @@ export const UserSchema = z.object({
 
 export const NewMessageSchema = z.object({
   chatId: z.string(),
-  text: z.string(),
-  senderId: z.string(),
-  receiverId: z.string(),
+  text: z.string().min(1),
 })
 
 export const MessageSchema = z.object({
@@ -19,8 +17,7 @@ export const MessageSchema = z.object({
   receiverId: z.string(),
   sender: UserSchema,
   receiver: UserSchema,
-  createdAt: z.date(),
-  // group: z.object({ id: z.string() }),
+  createdAt: z.string(),
 })
 
 export const GroupSchema = z.object({

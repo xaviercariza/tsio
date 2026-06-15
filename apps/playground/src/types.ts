@@ -1,20 +1,6 @@
 import type { z } from 'zod'
 import type { MessageSchema, UserSchema } from './server/tsio/schemas'
 
-import type session from 'express-session'
-
-declare module 'express-session' {
-  interface SessionData {
-    user: UserProfile | null
-  }
-}
-
-declare module 'http' {
-  interface IncomingMessage {
-    session?: session.Session & Partial<session.SessionData>
-  }
-}
-
 export type MessageType = z.infer<typeof MessageSchema>
 export type UserProfile = z.infer<typeof UserSchema>
 export type User = UserProfile & {
@@ -31,7 +17,7 @@ export type Message = {
   receiverId: string
   sender: UserProfile
   receiver: UserProfile
-  createdAt: Date
+  createdAt: string
 }
 export type Chat = {
   key: string
@@ -43,6 +29,11 @@ export type Group = {
   id: string
   messages: Message[]
   users: UserProfile[]
+}
+
+export type DemoSnapshot = {
+  users: UserProfile[]
+  chat: Group
 }
 
 type ErrorResponse = { success: false; error: string; code: number }
