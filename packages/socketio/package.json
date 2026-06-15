@@ -18,6 +18,12 @@
       "types": "./dist/server.d.ts"
     }
   },
+  "typesVersions": {
+    "*": {
+      "client": ["dist/client.d.ts"],
+      "server": ["dist/server.d.ts"]
+    }
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
