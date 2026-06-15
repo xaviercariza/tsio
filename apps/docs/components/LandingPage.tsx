@@ -1,4 +1,3 @@
-import React from 'react'
 import styles from './LandingPage.module.css'
 
 const code = `const api = contract({

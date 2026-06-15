@@ -14,11 +14,11 @@ async function createMainServer() {
 
   app.use(express.json())
 
-  app.get('/health', (req, res) => {
+  app.get('/health', (_req, res) => {
     return res.send('Ok')
   })
 
-  app.get('/api/demo', (req, res) => {
+  app.get('/api/demo', (_req, res) => {
     return res.send(getDemoSnapshot())
   })
 

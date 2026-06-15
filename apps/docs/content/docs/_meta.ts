@@ -1,4 +1,6 @@
-{
+import type { MetaRecord } from 'nextra'
+
+const meta: MetaRecord = {
   "introduction": "Introduction",
   "getting-started": "Getting Started",
   "core-concepts": "Core Concepts",
@@ -10,3 +12,5 @@
   "transports": "Transports",
   "testing": "Testing Your App"
 }
+
+export default meta

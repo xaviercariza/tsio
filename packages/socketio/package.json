@@ -20,8 +20,12 @@
   },
   "typesVersions": {
     "*": {
-      "client": ["dist/client.d.ts"],
-      "server": ["dist/server.d.ts"]
+      "client": [
+        "dist/client.d.ts"
+      ],
+      "server": [
+        "dist/server.d.ts"
+      ]
     }
   },
   "scripts": {
@@ -30,21 +34,18 @@
     "prettier": "prettier --write src/**/*.ts --config ../../prettier.config.cjs",
     "types-check": "tsc --noemit"
   },
-  "dependencies": {
-    "uuid": "^9.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@tsio/core": "workspace:^",
-    "@types/node": "^20.11.24",
-    "@types/uuid": "^9.0.8",
-    "socket.io": "^4.7.4",
-    "socket.io-client": "^4.7.4",
-    "tsup": "^8.0.1",
-    "typescript": "^5.4.2"
+    "@types/node": "^24.13.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "@tsio/core": "workspace:^",
-    "socket.io": "^4.7.4",
-    "socket.io-client": "^4.7.4"
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   }
 }

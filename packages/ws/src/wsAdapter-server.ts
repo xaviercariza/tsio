@@ -1,5 +1,5 @@
 import type { ContractAction, TsIoServerAdapter, TsIoServerEmitter } from '@tsio/core'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 import type wsModule from 'ws'
 import type { WebSocketServer } from 'ws'
 
@@ -23,7 +23,7 @@ function ws<Action extends ContractAction>(
 
   return {
     emitTo: (event, to, data) => {
-      const messageId = uuidv4()
+      const messageId = randomUUID()
       emitToClient(to, { messageId, event, data })
     },
     on: (eventKey, handler) => {

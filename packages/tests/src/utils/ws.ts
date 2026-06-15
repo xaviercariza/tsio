@@ -61,11 +61,10 @@ async function initializeTsIo(wss: TsIoWebSocketServer): Promise<WsServer> {
     wss.on('connection', (socket, req) => {
       const uuid = req.url?.replace('/?uuid=', '')
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      socket.id = uuid
+      const tsioSocket = socket as TsIoWebSocket
+      tsioSocket.id = uuid
 
-      const adapter = ws(wss, socket)
+      const adapter = ws(wss, tsioSocket)
 
       function onSocketPostError(e: Error) {
         console.log('onSocketPostError: ', e)
@@ -74,7 +73,7 @@ async function initializeTsIo(wss: TsIoWebSocketServer): Promise<WsServer> {
       socket.on('error', onSocketPostError)
 
       resolve({
-        socket,
+        socket: tsioSocket,
         adapter,
       })
     })
@@ -117,9 +116,6 @@ async function createSockets<Contract extends ContractRouterType>(
   const wss = new WebSocketServer({ noServer: true }) as TsIoWebSocketServer
   const port = (httpServer.address() as AddressInfo).port
 
-  const socket1 = await createClientSocket(contract, port)
-  const socket2 = await createClientSocket(contract, port)
-
   function onSocketPreError(e: Error) {
     console.log('onSocketPreError: ', e)
   }
@@ -132,9 +128,12 @@ async function createSockets<Contract extends ContractRouterType>(
     })
   })
 
-  const server = await initializeTsIo(wss)
-
+  const serverConnection = initializeTsIo(wss)
+  const socket1 = await createClientSocket(contract, port)
+  const server = await serverConnection
   await waitForSocketState(socket1.socket, socket1.socket.OPEN)
+
+  const socket2 = await createClientSocket(contract, port)
   await waitForSocketState(socket2.socket, socket2.socket.OPEN)
 
   return {

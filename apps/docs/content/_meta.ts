@@ -1,4 +1,6 @@
-{
+import type { MetaRecord } from 'nextra'
+
+const meta: MetaRecord = {
   "index": {
     "title": "Home",
     "theme": {
@@ -14,7 +16,8 @@
   "github": {
     "title": "GitHub ↗",
     "type": "page",
-    "href": "https://github.com/xaviercariza/tsio",
-    "newWindow": true
+    "href": "https://github.com/xaviercariza/tsio"
   }
 }
+
+export default meta

@@ -1,5 +1,3 @@
-import type { z } from 'zod'
-
 type MaybePromise<TType> = Promise<TType> | TType
 
 type Simplify<TType> = TType extends any[] | Date
@@ -11,7 +9,12 @@ type Simplify<TType> = TType extends any[] | Date
 type Overwrite<TType, TWith> = Simplify<Omit<TType, keyof TWith> & TWith>
 type MergeContext<TContext, TContextOverride> = Overwrite<TContext, TContextOverride>
 
-type InferSchema<Schema> = Schema extends z.ZodTypeAny ? z.infer<Schema> : never
+type TsIoSchema<TOutput = any> = {
+  _output: TOutput
+  parse(data: unknown): TOutput
+}
+
+type InferSchema<Schema> = Schema extends TsIoSchema<infer Output> ? Output : never
 
 type TSuccessResponse<Data> = { success: true; data: Data }
 type ErrorResponse = { success: false; error: string }
@@ -24,6 +27,7 @@ export type {
   MergeContext,
   Overwrite,
   Simplify,
+  TsIoSchema,
   TResponse,
   TSuccessResponse,
 }

@@ -1,6 +1,6 @@
 import type { ContractAction, TsIoServerAdapter, TsIoServerEmitter } from '@tsio/core'
+import { randomUUID } from 'node:crypto'
 import type { Socket } from 'socket.io'
-import { v4 as uuidv4 } from 'uuid'
 
 type TsIoSocketIoSocket = Socket & { id?: string }
 
@@ -14,7 +14,7 @@ function socketio<Action extends ContractAction>(
 
   return {
     emitTo: (event, to, data) => {
-      const messageId = uuidv4()
+      const messageId = randomUUID()
       const response = { messageId, event, data }
 
       emitToClient(to, response)

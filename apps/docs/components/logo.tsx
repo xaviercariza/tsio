@@ -1,5 +1,3 @@
-import React from 'react'
-
 export function Logo() {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', fontWeight: 900 }}>

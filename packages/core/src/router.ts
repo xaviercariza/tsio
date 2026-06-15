@@ -85,8 +85,6 @@ export interface ActionBuilder<
   ): Action<RootContract, TInitialContext, TInput, TOutput>
 }
 
-type AnyActionBuilder = ActionBuilder<any, any, any, any, any>
-
 type AnyRouterCreator = RouterCreator<any, any, any>
 interface RouterCreator<
   TContract extends ContractRouterType,
