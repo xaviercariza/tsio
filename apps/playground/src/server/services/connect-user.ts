@@ -1,14 +1,7 @@
-import { prisma } from '../prisma'
+import { connectUser as connectMemoryUser } from '../store'
 
 const connectUser = async (userId: string, socketId: string) => {
-  await prisma.user.update({
-    where: {
-      id: userId,
-    },
-    data: {
-      socketId: socketId,
-    },
-  })
+  connectMemoryUser(userId, socketId)
 }
 
 export { connectUser }
