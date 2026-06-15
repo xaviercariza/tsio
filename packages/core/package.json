@@ -5,6 +5,10 @@
   "license": "MIT",
   "author": "Xavier Cardona",
   "version": "0.0.3",
+  "files": [
+    "CHANGELOG.md",
+    "dist"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

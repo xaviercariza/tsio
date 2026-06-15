@@ -5,6 +5,10 @@
   "license": "MIT",
   "author": "Xavier Cardona",
   "version": "0.0.3",
+  "files": [
+    "CHANGELOG.md",
+    "dist"
+  ],
   "exports": {
     "./client": {
       "types": "./dist/client.d.ts",
@@ -33,7 +37,7 @@
     "ws": "^8.21.0"
   },
   "peerDependencies": {
-    "@tsio/core": "workspace:^",
+    "@tsio/core": "^0.0.3 || ^0.1.0",
     "ws": "^8.21.0"
   }
 }
